@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 [tool.ruff]
 target-version = "py312"
 line-length = 120
-exclude = ["*/migrations/*"]
+exclude = ["*/migrations/*", "manage.py"]
 
 [tool.ruff.lint]
 select = [
@@ -16,6 +16,10 @@ select = [
     "I",   # isort
     "B",   # flake8-bugbear
     "UP",  # pyupgrade
+    "S",   # flake8-bandit (security)
+    "N",   # pep8-naming
+    "ANN", # flake8-annotations
+    "C90", # mccabe complexity
 ]
 
 [tool.mypy]
