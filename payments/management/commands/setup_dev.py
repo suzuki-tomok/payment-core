@@ -4,32 +4,33 @@ Usage:
     python manage.py setup_dev
 """
 
-from typing import Any
-
 from django.core.management.base import BaseCommand
 
 from payments.models import Company, CreditPlan, SubscriptionPlan, User
+
+ADMIN_PASSWORD = "admin1234"  # noqa: S105
+TEST_PASSWORD = "test1234"  # noqa: S105
 
 
 class Command(BaseCommand):
     help = "開発環境の初期データをセットアップします"
 
-    def handle(self, *args: Any, **options: Any) -> None:
+    def handle(self, **options: object) -> None:
         # --- Company ---
         company, _ = Company.objects.get_or_create(name="テスト株式会社")
         self.stdout.write(f"Company: {company.name}")
 
         # --- Superuser ---
         if not User.objects.filter(username="admin").exists():
-            User.objects.create_superuser(username="admin", password="admin1234", company=company)
-            self.stdout.write(self.style.SUCCESS("Superuser: admin / admin1234"))
+            User.objects.create_superuser(username="admin", password=ADMIN_PASSWORD, company=company)
+            self.stdout.write(self.style.SUCCESS(f"Superuser: admin / {ADMIN_PASSWORD}"))
         else:
             self.stdout.write("Superuser: already exists")
 
         # --- テストユーザー ---
         if not User.objects.filter(username="testuser").exists():
-            User.objects.create_user(username="testuser", password="test1234", company=company)
-            self.stdout.write(self.style.SUCCESS("Test user: testuser / test1234"))
+            User.objects.create_user(username="testuser", password=TEST_PASSWORD, company=company)
+            self.stdout.write(self.style.SUCCESS(f"Test user: testuser / {TEST_PASSWORD}"))
         else:
             self.stdout.write("Test user: already exists")
 
