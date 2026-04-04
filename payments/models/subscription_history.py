@@ -12,8 +12,12 @@ class SubscriptionHistory(models.Model):
         CANCELED = "canceled", "Canceled"
         UNPAID = "unpaid", "Unpaid"
 
-    stripe_customer = models.ForeignKey(StripeCustomer, on_delete=models.CASCADE, related_name="subscription_histories")
-    subscription_plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT, related_name="subscription_histories")
+    stripe_customer = models.ForeignKey(
+        StripeCustomer, on_delete=models.CASCADE, related_name="subscription_histories"
+    )
+    subscription_plan = models.ForeignKey(
+        SubscriptionPlan, on_delete=models.PROTECT, related_name="subscription_histories"
+    )
     stripe_subscription_id = models.CharField(max_length=255, unique=True)
     status = models.CharField(max_length=20, choices=Status.choices)
     current_period_start = models.DateTimeField()
