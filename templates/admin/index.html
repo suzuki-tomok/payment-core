@@ -1,0 +1,10 @@
+{% extends "admin/index.html" %}
+
+{% block content %}
+<div style="margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 5px;">
+    <a href="{% url 'export_all' %}" class="button" style="padding: 10px 20px;">
+        全テーブル一括エクスポート (Excel)
+    </a>
+</div>
+{{ block.super }}
+{% endblock %}

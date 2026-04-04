@@ -2,14 +2,18 @@ asgiref==3.11.1
 certifi==2026.2.25
 charset-normalizer==3.4.7
 colorama==0.4.6
+diff-match-patch==20241021
 Django==5.2.12
+django-import-export==4.4.0
 django-stubs==6.0.2
 django-stubs-ext==6.0.2
+et_xmlfile==2.0.0
 idna==3.11
 iniconfig==2.3.0
 librt==0.8.1
 mypy==1.20.0
 mypy_extensions==1.1.0
+openpyxl==3.1.5
 packaging==26.0
 pathspec==1.0.4
 pluggy==1.6.0
@@ -21,6 +25,7 @@ requests==2.33.1
 ruff==0.15.8
 sqlparse==0.5.5
 stripe==15.0.1
+tablib==3.9.0
 types-PyYAML==6.0.12.20250915
 typing_extensions==4.15.0
 tzdata==2025.3

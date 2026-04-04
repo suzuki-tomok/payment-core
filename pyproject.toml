@@ -32,6 +32,19 @@ exclude = ["manage\\.py$", ".*/migrations/.*"]
 module = "config.settings"
 disallow_untyped_defs = false
 
+[[tool.mypy.overrides]]
+module = ["import_export.*", "openpyxl.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["payments.admin", "payments.resources"]
+disallow_subclassing_any = false
+
+[[tool.mypy.overrides]]
+module = "payments.views.*"
+disallow_subclassing_any = false
+disable_error_code = ["attr-defined"]
+
 [tool.django-stubs]
 django_settings_module = "config.settings"
 

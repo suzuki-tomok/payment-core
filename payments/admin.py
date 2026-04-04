@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from import_export.admin import ExportMixin
 
 from .models import (
     CheckoutSession,
@@ -11,6 +12,16 @@ from .models import (
     SubscriptionHistory,
     SubscriptionPlan,
     User,
+)
+from .resources import (
+    CheckoutSessionResource,
+    CompanyResource,
+    CompanyUsageHistoryResource,
+    CreditHistoryResource,
+    CreditPlanResource,
+    StripeCustomerResource,
+    SubscriptionHistoryResource,
+    SubscriptionPlanResource,
 )
 
 
@@ -29,25 +40,29 @@ class UserAdmin(BaseUserAdmin):  # type: ignore[type-arg]
 
 
 @admin.register(Company)
-class CompanyAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+class CompanyAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    resource_class = CompanyResource
     list_display = ("id", "name", "created_at")
     search_fields = ("name",)
 
 
 @admin.register(StripeCustomer)
-class StripeCustomerAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+class StripeCustomerAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    resource_class = StripeCustomerResource
     list_display = ("id", "company", "stripe_customer_id", "created_at")
     search_fields = ("stripe_customer_id", "company__name")
 
 
 @admin.register(SubscriptionPlan)
-class SubscriptionPlanAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+class SubscriptionPlanAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    resource_class = SubscriptionPlanResource
     list_display = ("id", "name", "stripe_price_id", "monthly_document_limit", "monthly_ai_chat_limit")
     search_fields = ("name",)
 
 
 @admin.register(SubscriptionHistory)
-class SubscriptionHistoryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+class SubscriptionHistoryAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    resource_class = SubscriptionHistoryResource
     list_display = (
         "id", "stripe_customer", "subscription_plan", "status", "current_period_start", "current_period_end",
     )
@@ -56,27 +71,31 @@ class SubscriptionHistoryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
 
 @admin.register(CreditPlan)
-class CreditPlanAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+class CreditPlanAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    resource_class = CreditPlanResource
     list_display = ("id", "name", "stripe_price_id", "document_credits", "ai_chat_credits")
     search_fields = ("name",)
 
 
 @admin.register(CreditHistory)
-class CreditHistoryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+class CreditHistoryAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    resource_class = CreditHistoryResource
     list_display = ("id", "stripe_customer", "credit_plan", "is_active", "created_at")
     list_filter = ("is_active",)
     search_fields = ("stripe_payment_id",)
 
 
 @admin.register(CompanyUsageHistory)
-class CompanyUsageHistoryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+class CompanyUsageHistoryAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    resource_class = CompanyUsageHistoryResource
     list_display = ("id", "company", "user", "type", "source", "created_at")
     list_filter = ("type", "source")
     search_fields = ("company__name",)
 
 
 @admin.register(CheckoutSession)
-class CheckoutSessionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+class CheckoutSessionAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    resource_class = CheckoutSessionResource
     list_display = ("id", "stripe_customer", "type", "status", "created_at")
     list_filter = ("type", "status")
     search_fields = ("stripe_session_id",)
