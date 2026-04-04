@@ -2,13 +2,24 @@
 
 ```mermaid
 erDiagram
+    Company ||--o{ User : "1:N"
     Company ||--o| StripeCustomer : "1:1"
+    Company ||--o{ CompanyUsageHistory : "1:N"
+    User ||--o{ CompanyUsageHistory : "1:N"
+    StripeCustomer ||--o{ CheckoutSession : "1:N"
     StripeCustomer ||--o{ SubscriptionHistory : "1:N"
     SubscriptionHistory }o--|| SubscriptionPlan : "N:1"
-    Company ||--o{ CompanyUsageHistory : "1:N"
     StripeCustomer ||--o{ CreditHistory : "1:N"
     CreditHistory }o--|| CreditPlan : "N:1"
-    StripeCustomer ||--o{ CheckoutSession : "1:N"
+
+    User {
+        int id PK
+        int company_id FK
+        string username
+        string password
+        datetime created_at
+        datetime updated_at
+    }
 
     Company {
         int id PK
@@ -25,12 +36,22 @@ erDiagram
         datetime updated_at
     }
 
-    SubscriptionPlan {
+    CompanyUsageHistory {
         int id PK
-        string name
-        string stripe_price_id
-        int monthly_document_limit
-        int monthly_ai_chat_limit
+        int company_id FK
+        int user_id FK
+        string type
+        string source
+        datetime created_at
+        datetime updated_at
+    }
+
+    CheckoutSession {
+        int id PK
+        int stripe_customer_id FK
+        string stripe_session_id
+        string type
+        string status
         datetime created_at
         datetime updated_at
     }
@@ -47,22 +68,12 @@ erDiagram
         datetime updated_at
     }
 
-    CompanyUsageHistory {
-        int id PK
-        int company_id FK
-        int user_id FK
-        string type
-        string source
-        datetime created_at
-        datetime updated_at
-    }
-
-    CreditPlan {
+    SubscriptionPlan {
         int id PK
         string name
         string stripe_price_id
-        int document_credits
-        int ai_chat_credits
+        int monthly_document_limit
+        int monthly_ai_chat_limit
         datetime created_at
         datetime updated_at
     }
@@ -77,12 +88,12 @@ erDiagram
         datetime updated_at
     }
 
-    CheckoutSession {
+    CreditPlan {
         int id PK
-        int stripe_customer_id FK
-        string stripe_session_id
-        string type
-        string status
+        string name
+        string stripe_price_id
+        int document_credits
+        int ai_chat_credits
         datetime created_at
         datetime updated_at
     }
@@ -92,11 +103,12 @@ erDiagram
 
 | テーブル | 責務 |
 |---------|------|
+| User | ユーザー（Django AbstractUser拡張、Companyに所属） |
 | Company | 会社情報 |
 | StripeCustomer | Stripe顧客紐付け |
-| SubscriptionPlan | 月額プラン定義（静的マスタ） |
-| SubscriptionHistory | サブスク契約履歴（Stripe連動） |
-| CreditPlan | クレジットパック定義（静的マスタ） |
-| CreditHistory | クレジット購入履歴（is_activeで無効化可能） |
 | CompanyUsageHistory | 使用履歴（type: document/ai_chat、source: subscription/credit） |
 | CheckoutSession | 決済セッション追跡 |
+| SubscriptionHistory | サブスク契約履歴（Stripe連動） |
+| SubscriptionPlan | 月額プラン定義（静的マスタ） |
+| CreditHistory | クレジット購入履歴（is_activeで無効化可能） |
+| CreditPlan | クレジットパック定義（静的マスタ） |

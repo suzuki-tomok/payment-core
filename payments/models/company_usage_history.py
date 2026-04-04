@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 from .company import Company
@@ -15,7 +16,7 @@ class CompanyUsageHistory(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="usage_histories")
     type = models.CharField(max_length=20, choices=Type.choices)
     source = models.CharField(max_length=20, choices=Source.choices)
-    user_id = models.IntegerField()
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="usage_histories")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

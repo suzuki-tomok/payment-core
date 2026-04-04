@@ -6,6 +6,7 @@ from .credit_plan import CreditPlan
 from .stripe_customer import StripeCustomer
 from .subscription_history import SubscriptionHistory
 from .subscription_plan import SubscriptionPlan
+from .user import User
 
 __all__ = [
     "CheckoutSession",
@@ -16,4 +17,5 @@ __all__ = [
     "StripeCustomer",
     "SubscriptionHistory",
     "SubscriptionPlan",
+    "User",
 ]
