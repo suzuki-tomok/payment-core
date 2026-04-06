@@ -45,6 +45,10 @@ module = "payments.views.*"
 disallow_subclassing_any = false
 disable_error_code = ["attr-defined"]
 
+[[tool.mypy.overrides]]
+module = "payments.services.stripe_service"
+disable_error_code = ["no-any-return", "no-untyped-call", "unused-ignore", "attr-defined"]
+
 [tool.django-stubs]
 django_settings_module = "config.settings"
 

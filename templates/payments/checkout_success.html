@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}決済処理中 - Payment Core{% endblock %}
+
+{% block content %}
+<div style="max-width: 500px; margin: 40px auto; text-align: center;">
+    <div class="card">
+        <h2 id="title">決済を処理中です...</h2>
+        <p id="message" style="margin: 16px 0; color: #666;">Stripe からの通知を待っています。</p>
+        <div id="spinner" style="margin: 20px 0;">
+            <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #eee; border-top: 4px solid #4361ee; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        </div>
+        <div id="actions" style="display: none;">
+            <a id="dashboard-link" href="{% url 'dashboard' %}" class="btn btn-primary">ダッシュボードに戻る</a>
+        </div>
+        <div id="timeout-actions" style="display: none;">
+            <p style="margin: 16px 0; color: #888; font-size: 13px;">通知の受信に時間がかかっています。<br>ページをリロードして再確認してください。</p>
+            <button onclick="location.reload()" class="btn btn-primary" style="margin-right: 8px;">リロードする</button>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline">ダッシュボードに戻る</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+<script>
+    // 2秒ごとに CheckoutSession のステータスを確認（最大60秒）
+    const sessionId = "{{ session_id }}";
+    const maxAttempts = 30;
+    let attempts = 0;
+
+    function checkStatus() {
+        attempts++;
+
+        fetch(`/api/checkout-status/?session_id=${sessionId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "completed") {
+                    // Webhook 処理完了
+                    document.getElementById("title").textContent = "決済が完了しました";
+                    document.getElementById("message").textContent = "ご利用ありがとうございます。";
+                    document.getElementById("spinner").style.display = "none";
+                    document.getElementById("actions").style.display = "block";
+                } else if (attempts >= maxAttempts) {
+                    // タイムアウト → リロードで再確認を促す
+                    document.getElementById("title").textContent = "処理に時間がかかっています";
+                    document.getElementById("message").style.display = "none";
+                    document.getElementById("spinner").style.display = "none";
+                    document.getElementById("timeout-actions").style.display = "block";
+                } else {
+                    // まだ pending → 2秒後にリトライ
+                    setTimeout(checkStatus, 2000);
+                }
+            })
+            .catch(() => {
+                setTimeout(checkStatus, 2000);
+            });
+    }
+
+    // ポーリング開始（リロード時も session_id が URL にあるので再開される）
+    if (sessionId) {
+        checkStatus();
+    } else {
+        document.getElementById("title").textContent = "決済が完了しました";
+        document.getElementById("message").textContent = "ご利用ありがとうございます。";
+        document.getElementById("spinner").style.display = "none";
+        document.getElementById("actions").style.display = "block";
+    }
+</script>
+{% endblock %}

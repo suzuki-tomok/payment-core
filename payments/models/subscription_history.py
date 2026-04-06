@@ -18,7 +18,7 @@ class SubscriptionHistory(models.Model):
     subscription_plan = models.ForeignKey(
         SubscriptionPlan, on_delete=models.PROTECT, related_name="subscription_histories"
     )
-    stripe_subscription_id = models.CharField(max_length=255, unique=True)
+    stripe_subscription_id = models.CharField(max_length=255)
     status = models.CharField(max_length=20, choices=Status.choices)
     current_period_start = models.DateTimeField()
     current_period_end = models.DateTimeField()

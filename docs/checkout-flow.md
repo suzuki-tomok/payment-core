@@ -9,37 +9,69 @@ sequenceDiagram
     participant DB as DB
     participant S as Stripe
 
-    U->>D: POST /payments/checkout/ (type=subscription, plan_id=1)
-    D->>DB: StripeCustomer取得 (なければ作成)
-    D->>S: stripe.checkout.Session.create(mode="subscription")
-    S-->>D: session_id, url
-    D->>DB: CheckoutSession保存 (type=subscription, status=pending)
-    D-->>U: Stripeへリダイレクト
+    U->>D: ダッシュボードでプラン選択
+    U->>D: POST /checkout/subscription/ (plan_id)
 
-    U->>S: カード入力・決済
-    S-->>U: success_url?session_id=xxx へリダイレクト
+    D->>DB: StripeCustomer 検索
 
-    U->>D: GET /payments/checkout/success/?session_id=xxx
-    D-->>U: 処理中画面 + ポーリング開始
-
-    loop 2秒ごと (最大60秒)
-        U->>D: GET /payments/api/status/?session_id=xxx
-        D->>DB: CheckoutSession.status確認
-        D-->>U: {"status": "pending"}
+    opt 初回（StripeCustomer が存在しない）
+        D->>S: stripe.Customer.create()
+        S-->>D: cus_xxx
+        D->>DB: StripeCustomer レコード作成 (stripe_customer_id = cus_xxx)
     end
 
-    S->>D: Webhook: checkout.session.completed
-    D->>DB: CheckoutSession.status = completed
-    D-->>S: 200 OK
+    D->>S: checkout.Session.create(mode="subscription", price=stripe_price_id)
+    S-->>D: session_id, url
+    D->>DB: CheckoutSession INSERT (type=subscription, status=pending)
+    D-->>U: Stripe Checkout 画面へリダイレクト
 
-    S->>D: Webhook: customer.subscription.created
-    D->>DB: Subscription作成 (plan=SubscriptionPlan, status=active)
-    D-->>S: 200 OK
+    U->>S: カード入力・決済
 
-    U->>D: GET /payments/api/status/?session_id=xxx
-    D->>DB: CheckoutSession.status確認
-    D-->>U: {"status": "completed"}
-    U->>U: 完了画面表示
+    alt 決済成功
+        S-->>U: /checkout/success/?session_id=xxx へリダイレクト
+        U->>D: GET /checkout/success/?session_id=xxx
+        D-->>U: 処理中画面（スピナー表示）
+
+        loop 2秒ごとにポーリング（最大60秒）
+            U->>D: GET /api/checkout-status/?session_id=xxx
+            D->>DB: CheckoutSession.status 確認
+            D-->>U: {"status": "pending"}
+        end
+
+        S->>D: Webhook: checkout.session.completed
+        D->>DB: CheckoutSession.status = completed
+        D-->>S: 200 OK
+
+        U->>D: GET /api/checkout-status/?session_id=xxx
+        D->>DB: CheckoutSession.status 確認
+        D-->>U: {"status": "completed"}
+        U->>U: 完了画面表示
+
+    else 決済キャンセル
+        S-->>U: /checkout/cancel/ へリダイレクト
+        U->>D: GET /checkout/cancel/
+        D-->>U: キャンセル画面表示
+    end
+
+    Note over U,S: 以降、Stripe が自動送信（Django は Webhook で受け取るだけ）
+
+    opt 契約直後
+        S->>D: Webhook: customer.subscription.created
+        D->>DB: SubscriptionHistory INSERT (status=active)
+        D-->>S: 200 OK
+    end
+
+    opt 毎月更新時
+        S->>D: Webhook: customer.subscription.updated
+        D->>DB: SubscriptionHistory INSERT (status=active, 新しい period)
+        D-->>S: 200 OK
+    end
+
+    opt 解約時
+        S->>D: Webhook: customer.subscription.deleted
+        D->>DB: SubscriptionHistory INSERT (status=canceled)
+        D-->>S: 200 OK
+    end
 ```
 
 ## クレジット購入
@@ -51,57 +83,105 @@ sequenceDiagram
     participant DB as DB
     participant S as Stripe
 
-    U->>D: POST /payments/checkout/ (type=credit, credit_plan_id=1)
-    D->>DB: StripeCustomer取得
-    D->>S: stripe.checkout.Session.create(mode="payment")
-    S-->>D: session_id, url
-    D->>DB: CheckoutSession保存 (type=credit, status=pending)
-    D-->>U: Stripeへリダイレクト
+    U->>D: ダッシュボードでクレジットパック選択
+    U->>D: POST /checkout/credit/ (credit_plan_id)
 
-    U->>S: カード入力・決済
-    S-->>U: success_url?session_id=xxx へリダイレクト
+    D->>DB: StripeCustomer 検索
 
-    U->>D: GET /payments/checkout/success/?session_id=xxx
-    D-->>U: 処理中画面 + ポーリング開始
-
-    loop 2秒ごと (最大60秒)
-        U->>D: GET /payments/api/status/?session_id=xxx
-        D->>DB: CheckoutSession.status確認
-        D-->>U: {"status": "pending"}
+    opt 初回（StripeCustomer が存在しない）
+        D->>S: stripe.Customer.create()
+        S-->>D: cus_xxx
+        D->>DB: StripeCustomer レコード作成 (stripe_customer_id = cus_xxx)
     end
 
-    S->>D: Webhook: checkout.session.completed
-    D->>DB: CheckoutSession.status = completed
-    D-->>S: 200 OK
+    D->>S: checkout.Session.create(mode="payment", price=stripe_price_id)
+    S-->>D: session_id, url
+    D->>DB: CheckoutSession INSERT (type=credit, status=pending)
+    D-->>U: Stripe Checkout 画面へリダイレクト
 
-    S->>D: Webhook: payment_intent.succeeded
-    D->>DB: Credit作成 (credit_plan=CreditPlan)
-    D->>DB: Wallet.document_credits += CreditPlan.document_credits
-    D->>DB: Wallet.ai_chat_credits += CreditPlan.ai_chat_credits
-    D-->>S: 200 OK
+    U->>S: カード入力・決済
 
-    U->>D: GET /payments/api/status/?session_id=xxx
-    D->>DB: CheckoutSession.status確認
-    D-->>U: {"status": "completed"}
-    U->>U: 完了画面表示
+    alt 決済成功
+        S-->>U: /checkout/success/?session_id=xxx へリダイレクト
+        U->>D: GET /checkout/success/?session_id=xxx
+        D-->>U: 処理中画面（スピナー表示）
+
+        loop 2秒ごとにポーリング（最大60秒）
+            U->>D: GET /api/checkout-status/?session_id=xxx
+            D->>DB: CheckoutSession.status 確認
+            D-->>U: {"status": "pending"}
+        end
+
+        S->>D: Webhook: checkout.session.completed
+        D->>DB: CheckoutSession.status = completed
+        D-->>S: 200 OK
+
+        U->>D: GET /api/checkout-status/?session_id=xxx
+        D->>DB: CheckoutSession.status 確認
+        D-->>U: {"status": "completed"}
+        U->>U: 完了画面表示
+
+    else 決済キャンセル
+        S-->>U: /checkout/cancel/ へリダイレクト
+        U->>D: GET /checkout/cancel/
+        D-->>U: キャンセル画面表示
+    end
+
+    Note over U,S: 以降、Stripe が自動送信（Django は Webhook で受け取るだけ）
+
+    opt 決済成功時
+        S->>D: Webhook: payment_intent.succeeded
+        D->>DB: CheckoutSession から stripe_session_id 取得
+        D->>S: Session.retrieve（line_items から price_id 特定）
+        S-->>D: price_id
+        D->>DB: CreditHistory INSERT (credit_plan, is_active=True)
+        D-->>S: 200 OK
+    end
 ```
 
-## フローの違い
+## 残量計算
 
-| | サブスクリプション | クレジット購入 |
-|---|---|---|
-| Checkout mode | `subscription` | `payment` |
-| CheckoutSession.type | `subscription` | `credit` |
-| Webhook | `customer.subscription.created` | `payment_intent.succeeded` |
-| DB処理 | Subscription作成 | Credit作成 + Wallet加算 |
+```mermaid
+sequenceDiagram
+    participant U as ユーザー
+    participant D as Django
+    participant DB as DB
+
+    U->>D: GET /dashboard/
+
+    Note over D,DB: サブスク残量計算
+
+    D->>DB: SubscriptionHistory を created_at DESC で取得（最新1件）
+    alt 最新レコードが active/trialing
+        D->>DB: CompanyUsageHistory COUNT (source=subscription, type=document, サブスク期間内)
+        D->>D: ドキュメント残 = monthly_document_limit - 使用数
+        D->>DB: CompanyUsageHistory COUNT (source=subscription, type=ai_chat, サブスク期間内)
+        D->>D: AIチャット残 = monthly_ai_chat_limit - 使用数
+    else 最新レコードが canceled/未契約
+        D->>D: ドキュメント残 = 0, AIチャット残 = 0
+    end
+
+    Note over D,DB: クレジット残量計算
+
+    D->>DB: CreditHistory (is_active=True) → CreditPlan のドキュメント/AIチャット合計
+    D->>DB: CompanyUsageHistory COUNT (source=credit, type=document)
+    D->>D: ドキュメント残 = 購入合計 - 消費数
+    D->>DB: CompanyUsageHistory COUNT (source=credit, type=ai_chat)
+    D->>D: AIチャット残 = 購入合計 - 消費数
+
+    D-->>U: ダッシュボード表示
+```
 
 ## エンドポイント
 
 | URL | メソッド | 説明 |
 |-----|---------|------|
-| /payments/checkout/ | POST | Checkout開始 |
-| /payments/checkout/success/ | GET | 成功画面 |
-| /payments/checkout/cancel/ | GET | キャンセル画面 |
-| /payments/api/status/ | GET | 状態確認API |
-| /payments/webhook/ | POST | Stripe Webhook |
-| /payments/billing-portal/ | GET | 顧客ポータル |
+| /login/ | GET/POST | ログイン画面 |
+| /logout/ | GET | ログアウト |
+| /dashboard/ | GET | ダッシュボード（残量表示・プラン変更・クレジット購入） |
+| /checkout/subscription/ | POST | サブスク Checkout 開始 |
+| /checkout/credit/ | POST | クレジット Checkout 開始 |
+| /checkout/success/ | GET | 決済処理中画面（ポーリング） |
+| /checkout/cancel/ | GET | 決済キャンセル画面 |
+| /api/checkout-status/ | GET | CheckoutSession ステータス確認 API |
+| /webhook/ | POST | Stripe Webhook 受信（対象イベント: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `payment_intent.succeeded`） |

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Payment Core{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .stat-item { text-align: center; padding: 20px; }
+    .stat-item .number { font-size: 32px; font-weight: bold; color: #4361ee; }
+    .stat-item .label { font-size: 14px; color: #666; margin-top: 4px; }
+    .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+    .plan-card { text-align: center; padding: 24px; border: 2px solid #eee; border-radius: 8px; background: #fff; }
+    .plan-card.current { border-color: #4361ee; }
+    .plan-card h3 { font-size: 20px; margin-bottom: 8px; }
+    .plan-card .limits { font-size: 13px; color: #888; margin-bottom: 16px; }
+    .credits { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .credit-card { text-align: center; padding: 20px; border: 2px solid #eee; border-radius: 8px; background: #fff; }
+    .credit-card h3 { font-size: 18px; margin-bottom: 8px; }
+    .credit-card .detail { font-size: 13px; color: #888; margin-bottom: 12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 現在の状態 -->
+<div class="card">
+    <h2>現在の利用状況</h2>
+    <div class="stats">
+        <div class="stat-item">
+            <div class="number">{{ subscription.plan_name }}</div>
+            <div class="label">現在のプラン</div>
+        </div>
+        <div class="stat-item">
+            <div class="number">{{ subscription.document_remaining }} / {{ subscription.document_limit }}</div>
+            <div class="label">ドキュメント残 (今月)</div>
+        </div>
+        <div class="stat-item">
+            <div class="number">{{ subscription.ai_chat_remaining }} / {{ subscription.ai_chat_limit }}</div>
+            <div class="label">AIチャット残 (今月)</div>
+        </div>
+        <div class="stat-item">
+            <div class="number">{{ credit.document_remaining }}</div>
+            <div class="label">クレジット残 (ドキュメント)</div>
+        </div>
+        <div class="stat-item">
+            <div class="number">{{ credit.ai_chat_remaining }}</div>
+            <div class="label">クレジット残 (AIチャット)</div>
+        </div>
+    </div>
+</div>
+
+<!-- プラン変更 -->
+<div class="card">
+    <h2>プラン変更</h2>
+    <div class="plans">
+        {% for plan in subscription_plans %}
+        <div class="plan-card {% if plan.name == subscription.plan_name %}current{% endif %}">
+            <h3>{{ plan.name }}</h3>
+            <div class="limits">
+                ドキュメント: {{ plan.monthly_document_limit }} / 月<br>
+                AIチャット: {{ plan.monthly_ai_chat_limit }} / 月
+            </div>
+            {% if plan.name == subscription.plan_name %}
+            <span class="btn btn-outline" style="cursor: default;">現在のプラン</span>
+            {% else %}
+            <form method="post" action="{% url 'subscription_checkout' %}">
+                {% csrf_token %}
+                <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                <button type="submit" class="btn btn-primary">このプランにする</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- クレジット購入 -->
+<div class="card">
+    <h2>クレジット購入</h2>
+    <div class="credits">
+        {% for cp in credit_plans %}
+        <div class="credit-card">
+            <h3>{{ cp.name }}</h3>
+            <div class="detail">
+                ドキュメント +{{ cp.document_credits }}<br>
+                AIチャット +{{ cp.ai_chat_credits }}
+            </div>
+            <form method="post" action="{% url 'credit_checkout' %}">
+                {% csrf_token %}
+                <input type="hidden" name="credit_plan_id" value="{{ cp.id }}">
+                <button type="submit" class="btn btn-success">購入する</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
