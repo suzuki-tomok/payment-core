@@ -1,4 +1,4 @@
-# 決済・クォータ関連 ER図
+# 決済機能 ER図
 
 ```mermaid
 erDiagram

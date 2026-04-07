@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 
 from .views import (
     checkout_cancel_view,
@@ -13,6 +14,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path("", RedirectView.as_view(url="/login/"), name="root"),
     path("login/", login_view, name="login"),
     path("logout/", logout_view, name="logout"),
     path("dashboard/", dashboard_view, name="dashboard"),

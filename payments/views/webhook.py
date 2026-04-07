@@ -31,18 +31,16 @@ def webhook_view(request: HttpRequest) -> HttpResponse:
     match event_type:
         case "checkout.session.completed":
             # Checkout 完了 → CheckoutSession.status を completed に
+            # type=credit なら CreditHistory も作成
             StripeService.handle_checkout_completed(data)
         case "customer.subscription.created":
             # サブスク契約 → SubscriptionHistory 作成
             StripeService.handle_subscription_created(data)
         case "customer.subscription.updated":
-            # サブスク更新（月次更新/プラン変更）→ status と期間を更新
+            # サブスク更新（月次更新/プラン変更）→ SubscriptionHistory 作成
             StripeService.handle_subscription_updated(data)
         case "customer.subscription.deleted":
-            # サブスク解約 → status を canceled に
+            # サブスク解約 → SubscriptionHistory 作成 (canceled)
             StripeService.handle_subscription_deleted(data)
-        case "payment_intent.succeeded":
-            # クレジット購入完了 → CreditHistory 作成
-            StripeService.handle_payment_succeeded(data)
 
     return HttpResponse(status=200)

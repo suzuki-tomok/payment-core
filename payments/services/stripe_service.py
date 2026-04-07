@@ -114,24 +114,69 @@ class StripeService:
         )
 
     @staticmethod
-    def handle_checkout_completed(data: dict) -> None:  # type: ignore[type-arg]
-        """Checkout 完了時: CheckoutSession.status を completed に更新."""
-        session_id = data.get("id", "")
-        CheckoutSession.objects.filter(stripe_session_id=session_id).update(
-            status="completed"
+    def handle_checkout_completed(data: object) -> None:
+        """Checkout 完了時: CheckoutSession.status を completed に更新.
+
+        type=credit の場合は CreditHistory も作成する。
+        session_id で確実に自分の CheckoutSession と紐づくため、
+        イベント到着順序の問題が起きない。
+        """
+        session_id = data["id"]  # type: ignore[index]
+        checkout = CheckoutSession.objects.filter(stripe_session_id=session_id).first()
+        if not checkout:
+            return
+
+        # ステータス更新
+        checkout.status = "completed"
+        checkout.save()
+
+        # クレジット購入の場合は CreditHistory も作成
+        if checkout.type == "credit":
+            StripeService._create_credit_history(checkout)  # noqa: SLF001
+
+    @staticmethod
+    def _create_credit_history(checkout: CheckoutSession) -> None:
+        """クレジット購入の CreditHistory を作成.
+
+        1. Stripe API で Session を取得し payment_intent_id と price_id を特定
+        2. CreditPlan を特定して CreditHistory を作成
+        """
+        session = stripe.checkout.Session.retrieve(
+            checkout.stripe_session_id, expand=["line_items"]
+        )
+        payment_intent_id = session.payment_intent
+        price_id = session.line_items.data[0].price.id  # type: ignore[union-attr]
+
+        try:
+            credit_plan = CreditPlan.objects.get(stripe_price_id=price_id)
+        except CreditPlan.DoesNotExist:
+            return
+
+        # 重複防止: stripe_payment_id が同じなら作成しない
+        CreditHistory.objects.get_or_create(
+            stripe_payment_id=payment_intent_id,
+            defaults={
+                "stripe_customer": checkout.stripe_customer,
+                "credit_plan": credit_plan,
+            },
         )
 
     @staticmethod
-    def _create_subscription_history(data: dict, status: str) -> None:  # type: ignore[type-arg]
+    def _create_subscription_history(data: object, status: str) -> None:
         """SubscriptionHistory を1件 INSERT する共通処理.
 
         1. Stripe の customer ID から StripeCustomer を取得
         2. price ID から SubscriptionPlan を特定
         3. SubscriptionHistory を INSERT（常に新規レコード）
         """
-        stripe_customer_id = data.get("customer", "")
-        stripe_subscription_id = data.get("id", "")
-        price_id = data["items"]["data"][0]["price"]["id"]
+        stripe_customer_id = data["customer"]  # type: ignore[index]
+        stripe_subscription_id = data["id"]  # type: ignore[index]
+
+        # Stripe API から最新のサブスク情報を取得（ペイロードにフィールドがない場合の対策）
+        sub = stripe.Subscription.retrieve(stripe_subscription_id)
+        # API 2025-03-31 以降: period は items.data[0] に移動
+        item = sub["items"]["data"][0]
+        price_id = item["price"]["id"]
 
         try:
             stripe_customer = StripeCustomer.objects.get(stripe_customer_id=stripe_customer_id)
@@ -139,8 +184,8 @@ class StripeService:
         except (StripeCustomer.DoesNotExist, SubscriptionPlan.DoesNotExist):
             return
 
-        period_start = datetime.fromtimestamp(data["current_period_start"], tz=UTC)
-        period_end = datetime.fromtimestamp(data["current_period_end"], tz=UTC)
+        period_start = datetime.fromtimestamp(item["current_period_start"], tz=UTC)
+        period_end = datetime.fromtimestamp(item["current_period_end"], tz=UTC)
 
         SubscriptionHistory.objects.create(
             stripe_customer=stripe_customer,
@@ -152,63 +197,17 @@ class StripeService:
         )
 
     @staticmethod
-    def handle_subscription_created(data: dict) -> None:  # type: ignore[type-arg]
+    def handle_subscription_created(data: object) -> None:
         """サブスク契約時: SubscriptionHistory を INSERT."""
-        StripeService._create_subscription_history(data, data.get("status", ""))  # noqa: SLF001
+        StripeService._create_subscription_history(data, data["status"])  # type: ignore[index]  # noqa: SLF001
 
     @staticmethod
-    def handle_subscription_updated(data: dict) -> None:  # type: ignore[type-arg]
+    def handle_subscription_updated(data: object) -> None:
         """サブスク更新時（月次更新/プラン変更）: SubscriptionHistory を INSERT."""
-        StripeService._create_subscription_history(data, data.get("status", ""))  # noqa: SLF001
+        StripeService._create_subscription_history(data, data["status"])  # type: ignore[index]  # noqa: SLF001
 
     @staticmethod
-    def handle_subscription_deleted(data: dict) -> None:  # type: ignore[type-arg]
+    def handle_subscription_deleted(data: object) -> None:
         """サブスク解約時: status=canceled で SubscriptionHistory を INSERT."""
         StripeService._create_subscription_history(data, "canceled")  # noqa: SLF001
 
-    @staticmethod
-    def handle_payment_succeeded(data: dict) -> None:  # type: ignore[type-arg]
-        """クレジット購入完了時: CreditHistory を作成.
-
-        1. Stripe の customer ID から StripeCustomer を取得
-        2. 直近の completed な credit CheckoutSession を取得
-        3. その Session から price_id を取得し CreditPlan を特定
-        4. CreditHistory を作成（重複防止のため stripe_payment_id で get_or_create）
-        """
-        stripe_customer_id = data.get("customer", "")
-        payment_id = data.get("id", "")
-
-        try:
-            stripe_customer = StripeCustomer.objects.get(stripe_customer_id=stripe_customer_id)
-        except StripeCustomer.DoesNotExist:
-            return
-
-        # 直近の完了済みクレジット CheckoutSession を取得
-        checkout = CheckoutSession.objects.filter(
-            stripe_customer=stripe_customer,
-            type="credit",
-            status="completed",
-        ).order_by("-created_at").first()
-
-        if not checkout:
-            return
-
-        # Stripe API から Session を取得して price_id を特定
-        session = stripe.checkout.Session.retrieve(
-            checkout.stripe_session_id, expand=["line_items"]
-        )
-        price_id = session.line_items.data[0].price.id  # type: ignore[union-attr]
-
-        try:
-            credit_plan = CreditPlan.objects.get(stripe_price_id=price_id)
-        except CreditPlan.DoesNotExist:
-            return
-
-        # 重複防止: stripe_payment_id が同じなら作成しない
-        CreditHistory.objects.get_or_create(
-            stripe_payment_id=payment_id,
-            defaults={
-                "stripe_customer": stripe_customer,
-                "credit_plan": credit_plan,
-            },
-        )

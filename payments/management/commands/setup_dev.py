@@ -38,58 +38,58 @@ class Command(BaseCommand):
         plans = [
             {
                 "name": "Free",
-                "stripe_price_id": "price_free",
+                "stripe_price_id": "price_1TJXPqBeOAeDXEq0RzQlv0c9",
                 "monthly_document_limit": 10,
                 "monthly_ai_chat_limit": 5,
             },
             {
                 "name": "Standard",
-                "stripe_price_id": "price_standard",
+                "stripe_price_id": "price_1TJXQRBeOAeDXEq0I06xZdni",
                 "monthly_document_limit": 100,
                 "monthly_ai_chat_limit": 50,
             },
             {
                 "name": "Premium",
-                "stripe_price_id": "price_premium",
+                "stripe_price_id": "price_1TJXQnBeOAeDXEq0Ymm43j2u",
                 "monthly_document_limit": 999999,
                 "monthly_ai_chat_limit": 999999,
             },
         ]
         for plan_data in plans:
-            plan, created = SubscriptionPlan.objects.get_or_create(
-                stripe_price_id=plan_data["stripe_price_id"],
+            plan, created = SubscriptionPlan.objects.update_or_create(
+                name=plan_data["name"],
                 defaults=plan_data,
             )
-            status = "(created)" if created else "(exists)"
+            status = "(created)" if created else "(updated)"
             self.stdout.write(f"SubscriptionPlan: {plan.name} {status}")
 
         # --- CreditPlan ---
         credit_plans = [
             {
                 "name": "クレジット10パック",
-                "stripe_price_id": "price_credit_10",
+                "stripe_price_id": "price_1TJXRLBeOAeDXEq0ofCf4qwf",
                 "document_credits": 10,
                 "ai_chat_credits": 10,
             },
             {
                 "name": "クレジット50パック",
-                "stripe_price_id": "price_credit_50",
+                "stripe_price_id": "price_1TJXRtBeOAeDXEq0tlRh7Omo",
                 "document_credits": 50,
                 "ai_chat_credits": 50,
             },
             {
                 "name": "クレジット100パック",
-                "stripe_price_id": "price_credit_100",
+                "stripe_price_id": "price_1TJXSEBeOAeDXEq0E9BO6v2o",
                 "document_credits": 100,
                 "ai_chat_credits": 100,
             },
         ]
         for cp_data in credit_plans:
-            cp, created = CreditPlan.objects.get_or_create(
-                stripe_price_id=cp_data["stripe_price_id"],
+            cp, created = CreditPlan.objects.update_or_create(
+                name=cp_data["name"],
                 defaults=cp_data,
             )
-            status = "(created)" if created else "(exists)"
+            status = "(created)" if created else "(updated)"
             self.stdout.write(f"CreditPlan: {cp.name} {status}")
 
         self.stdout.write(self.style.SUCCESS("\nSetup complete!"))

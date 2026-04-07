@@ -21,9 +21,9 @@
 {% endblock %}
 
 {% block content %}
-<!-- 現在の状態 -->
+<!-- サブスクリプション状況 -->
 <div class="card">
-    <h2>現在の利用状況</h2>
+    <h2>サブスクリプション</h2>
     <div class="stats">
         <div class="stat-item">
             <div class="number">{{ subscription.plan_name }}</div>
@@ -37,13 +37,20 @@
             <div class="number">{{ subscription.ai_chat_remaining }} / {{ subscription.ai_chat_limit }}</div>
             <div class="label">AIチャット残 (今月)</div>
         </div>
+    </div>
+</div>
+
+<!-- クレジット状況 -->
+<div class="card">
+    <h2>クレジット残高</h2>
+    <div class="stats">
         <div class="stat-item">
             <div class="number">{{ credit.document_remaining }}</div>
-            <div class="label">クレジット残 (ドキュメント)</div>
+            <div class="label">ドキュメント</div>
         </div>
         <div class="stat-item">
             <div class="number">{{ credit.ai_chat_remaining }}</div>
-            <div class="label">クレジット残 (AIチャット)</div>
+            <div class="label">AIチャット</div>
         </div>
     </div>
 </div>

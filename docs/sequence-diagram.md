@@ -57,18 +57,24 @@ sequenceDiagram
 
     opt 契約直後
         S->>D: Webhook: customer.subscription.created
+        D->>S: Subscription.retrieve（詳細取得）
+        S-->>D: subscription_id, price_id, period_start, period_end
         D->>DB: SubscriptionHistory INSERT (status=active)
         D-->>S: 200 OK
     end
 
     opt 毎月更新時
         S->>D: Webhook: customer.subscription.updated
+        D->>S: Subscription.retrieve（詳細取得）
+        S-->>D: subscription_id, price_id, period_start, period_end
         D->>DB: SubscriptionHistory INSERT (status=active, 新しい period)
         D-->>S: 200 OK
     end
 
     opt 解約時
         S->>D: Webhook: customer.subscription.deleted
+        D->>S: Subscription.retrieve（詳細取得）
+        S-->>D: subscription_id, price_id, period_start, period_end
         D->>DB: SubscriptionHistory INSERT (status=canceled)
         D-->>S: 200 OK
     end
@@ -114,6 +120,9 @@ sequenceDiagram
 
         S->>D: Webhook: checkout.session.completed
         D->>DB: CheckoutSession.status = completed
+        D->>S: Session.retrieve（line_items から price_id 特定）
+        S-->>D: payment_intent_id, price_id
+        D->>DB: CreditHistory INSERT (credit_plan, is_active=True)
         D-->>S: 200 OK
 
         U->>D: GET /api/checkout-status/?session_id=xxx
@@ -125,17 +134,6 @@ sequenceDiagram
         S-->>U: /checkout/cancel/ へリダイレクト
         U->>D: GET /checkout/cancel/
         D-->>U: キャンセル画面表示
-    end
-
-    Note over U,S: 以降、Stripe が自動送信（Django は Webhook で受け取るだけ）
-
-    opt 決済成功時
-        S->>D: Webhook: payment_intent.succeeded
-        D->>DB: CheckoutSession から stripe_session_id 取得
-        D->>S: Session.retrieve（line_items から price_id 特定）
-        S-->>D: price_id
-        D->>DB: CreditHistory INSERT (credit_plan, is_active=True)
-        D-->>S: 200 OK
     end
 ```
 
@@ -184,4 +182,4 @@ sequenceDiagram
 | /checkout/success/ | GET | 決済処理中画面（ポーリング） |
 | /checkout/cancel/ | GET | 決済キャンセル画面 |
 | /api/checkout-status/ | GET | CheckoutSession ステータス確認 API |
-| /webhook/ | POST | Stripe Webhook 受信（対象イベント: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `payment_intent.succeeded`） |
+| /webhook/ | POST | Stripe Webhook 受信（対象イベント: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`） |
