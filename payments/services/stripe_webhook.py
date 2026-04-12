@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 
 import stripe
 from django.conf import settings
+from django.db import transaction
 
 from ..models import (
     CheckoutSession,
@@ -52,16 +53,17 @@ class StripeWebhookService:
             logger.warning("CheckoutSession not found: session_id=%s", session_id)
             return
 
-        # CheckoutSession のステータス更新
-        checkout.status = "completed"
-        checkout.save()
-        logger.info("CheckoutSession completed: session_id=%s, type=%s", session_id, checkout.type)
+        # CheckoutSession の更新と History の作成をトランザクションで囲む
+        # どちらかが失敗したら両方ロールバックされる
+        with transaction.atomic():
+            checkout.status = "completed"
+            checkout.save()
+            logger.info("CheckoutSession completed: session_id=%s, type=%s", session_id, checkout.type)
 
-        # type に応じて History を作成
-        if checkout.type == "credit":
-            StripeWebhookService._create_credit_history(checkout)  # noqa: SLF001
-        elif checkout.type == "custom":
-            StripeWebhookService._create_invoice_history(checkout)  # noqa: SLF001
+            if checkout.type == "credit":
+                StripeWebhookService._create_credit_history(checkout)  # noqa: SLF001
+            elif checkout.type == "custom":
+                StripeWebhookService._create_invoice_history(checkout)  # noqa: SLF001
 
     @staticmethod
     def _create_credit_history(checkout: CheckoutSession) -> None:

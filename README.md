@@ -81,6 +81,21 @@ ruff check .          # リンター
 mypy .                # 型チェック
 ```
 
+### テスト戦略
+
+| レイヤー | テスト対象 | Stripe モック | テストファイル |
+|---------|-----------|:---:|------------|
+| バリデーション | StripeCheckoutValidator | 不要 | test_stripe_checkout_validator.py |
+| ドメインサービス | RemainingSubscriptionService | 不要 | test_remaining_subscription.py |
+| ドメインサービス | RemainingCreditService | 不要 | test_remaining_credit.py |
+| Stripe Checkout | StripeCheckoutService | 必要 | test_stripe_checkout.py |
+| Stripe Webhook | StripeWebhookService | 必要 | test_stripe_webhook.py |
+
+- **モック不要のテスト**: テスト用データを DB に作成 → サービス呼び出し → 結果を検証
+- **モック必要のテスト**: Stripe API を `unittest.mock.patch` で差し替え → DB への書き込み結果を検証
+- **テストデータ**: `conftest.py` に pytest fixture で定義。各テストは fixture を引数で受け取る
+- **モックヘルパー**: `mock_stripe.py` に Stripe API レスポンスの組み立てを集約
+
 ## 設計ドキュメント
 
 - [ER図](docs/er-diagram.md)
