@@ -159,15 +159,20 @@ class StripeWebhookService:
         period_start = datetime.fromtimestamp(item["current_period_start"], tz=UTC)
         period_end = datetime.fromtimestamp(item["current_period_end"], tz=UTC)
 
-        SubscriptionHistory.objects.create(
-            stripe_customer=stripe_customer,
-            subscription_plan=plan,
+        _, created = SubscriptionHistory.objects.update_or_create(
             stripe_subscription_id=stripe_subscription_id,
-            status="created",
-            current_period_start=period_start,
-            current_period_end=period_end,
+            defaults={
+                "stripe_customer": stripe_customer,
+                "subscription_plan": plan,
+                "status": "created",
+                "current_period_start": period_start,
+                "current_period_end": period_end,
+            },
         )
-        logger.info("SubscriptionHistory created: subscription_id=%s", stripe_subscription_id)
+        if created:
+            logger.info("SubscriptionHistory created: subscription_id=%s", stripe_subscription_id)
+        else:
+            logger.info("SubscriptionHistory already exists (updated): subscription_id=%s", stripe_subscription_id)
 
     @staticmethod
     def handle_subscription_updated(data: object) -> None:
