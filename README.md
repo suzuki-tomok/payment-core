@@ -73,6 +73,14 @@ stripe listen --forward-to localhost:8000/webhook/
 CVC: 123
 ```
 
+## テスト・静的解析
+
+```bash
+pytest                # テスト実行
+ruff check .          # リンター
+mypy .                # 型チェック
+```
+
 ## 設計ドキュメント
 
 - [ER図](docs/er-diagram.md)
