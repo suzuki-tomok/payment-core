@@ -1,57 +1,96 @@
 import json
+import logging
 
+import stripe
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
 from ..models import CheckoutSession, CreditPlan, SubscriptionPlan, User
-from ..services import StripeService
+from ..services import StripeCheckoutService, StripeCheckoutValidator
+
+logger = logging.getLogger(__name__)
+
+ERROR_TEMPLATE = "payments/checkout_error.html"
 
 
 @login_required
 def subscription_checkout_view(request: HttpRequest) -> HttpResponse:
-    """サブスクリプション Checkout.
-
-    1. StripeCustomer を取得/作成
-    2. ダッシュボードで選択された plan_id から SubscriptionPlan を取得
-    3. Stripe に Checkout Session を作成
-    4. Stripe の決済画面にリダイレクト
-    """
+    """サブスクリプション Checkout."""
     if request.method != "POST":
         return redirect("dashboard")
 
     user: User = request.user  # type: ignore[assignment]
-    stripe_customer = StripeService.get_or_create_customer(user.company)
-    base_url = request.build_absolute_uri("/")
-
     plan_id = request.POST.get("plan_id", "")
-    plan = SubscriptionPlan.objects.get(id=plan_id)
-    session = StripeService.create_subscription_checkout(stripe_customer, plan, base_url)
 
-    return redirect(session.url or "dashboard")
+    # バリデーション
+    error = StripeCheckoutValidator.validate_subscription(user, plan_id)
+    if error:
+        return render(request, ERROR_TEMPLATE, {"message": error})
+
+    try:
+        stripe_customer = StripeCheckoutService.get_or_create_customer(user.company)
+        plan = SubscriptionPlan.objects.get(id=plan_id)
+        session = StripeCheckoutService.create_subscription_checkout(
+            stripe_customer, plan, request.build_absolute_uri("/"),
+        )
+        return redirect(session.url or "dashboard")
+    except stripe.StripeError:
+        logger.exception("Stripe API error in subscription checkout")
+        return render(request, ERROR_TEMPLATE, {"message": "決済サービスとの通信に失敗しました。"})
 
 
 @login_required
 def credit_checkout_view(request: HttpRequest) -> HttpResponse:
-    """クレジット購入 Checkout.
-
-    1. StripeCustomer を取得/作成
-    2. ダッシュボードで選択された credit_plan_id から CreditPlan を取得
-    3. Stripe に Checkout Session を作成
-    4. Stripe の決済画面にリダイレクト
-    """
+    """クレジット購入 Checkout."""
     if request.method != "POST":
         return redirect("dashboard")
 
-    user: User = request.user  # type: ignore[assignment]
-    stripe_customer = StripeService.get_or_create_customer(user.company)
-    base_url = request.build_absolute_uri("/")
-
     credit_plan_id = request.POST.get("credit_plan_id", "")
-    credit_plan = CreditPlan.objects.get(id=credit_plan_id)
-    session = StripeService.create_credit_checkout(stripe_customer, credit_plan, base_url)
 
-    return redirect(session.url or "dashboard")
+    # バリデーション
+    error = StripeCheckoutValidator.validate_credit(credit_plan_id)
+    if error:
+        return render(request, ERROR_TEMPLATE, {"message": error})
+
+    try:
+        user: User = request.user  # type: ignore[assignment]
+        stripe_customer = StripeCheckoutService.get_or_create_customer(user.company)
+        credit_plan = CreditPlan.objects.get(id=credit_plan_id)
+        session = StripeCheckoutService.create_credit_checkout(
+            stripe_customer, credit_plan, request.build_absolute_uri("/"),
+        )
+        return redirect(session.url or "dashboard")
+    except stripe.StripeError:
+        logger.exception("Stripe API error in credit checkout")
+        return render(request, ERROR_TEMPLATE, {"message": "決済サービスとの通信に失敗しました。"})
+
+
+@login_required
+def custom_checkout_view(request: HttpRequest) -> HttpResponse:
+    """カスタム金額 Checkout."""
+    if request.method != "POST":
+        return redirect("dashboard")
+
+    description = request.POST.get("description", "")
+
+    # バリデーション
+    error, amount = StripeCheckoutValidator.validate_custom(
+        request.POST.get("amount", "0"), description,
+    )
+    if error:
+        return render(request, ERROR_TEMPLATE, {"message": error})
+
+    try:
+        user: User = request.user  # type: ignore[assignment]
+        stripe_customer = StripeCheckoutService.get_or_create_customer(user.company)
+        session = StripeCheckoutService.create_custom_checkout(
+            stripe_customer, amount, description.strip(), request.build_absolute_uri("/"),
+        )
+        return redirect(session.url or "dashboard")
+    except stripe.StripeError:
+        logger.exception("Stripe API error in custom checkout")
+        return render(request, ERROR_TEMPLATE, {"message": "決済サービスとの通信に失敗しました。"})
 
 
 @login_required
@@ -69,11 +108,7 @@ def checkout_cancel_view(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def checkout_status_view(request: HttpRequest) -> HttpResponse:
-    """CheckoutSession のステータスを JSON で返す.
-
-    フロントからポーリングで呼ばれる。
-    status が completed になったら Webhook 処理完了。
-    """
+    """CheckoutSession のステータスを JSON で返す."""
     session_id = request.GET.get("session_id", "")
 
     try:

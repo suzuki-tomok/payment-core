@@ -3,6 +3,7 @@ from .company import Company
 from .company_usage_history import CompanyUsageHistory
 from .credit_history import CreditHistory
 from .credit_plan import CreditPlan
+from .invoice_history import InvoiceHistory
 from .stripe_customer import StripeCustomer
 from .subscription_history import SubscriptionHistory
 from .subscription_plan import SubscriptionPlan
@@ -14,6 +15,7 @@ __all__ = [
     "CompanyUsageHistory",
     "CreditHistory",
     "CreditPlan",
+    "InvoiceHistory",
     "StripeCustomer",
     "SubscriptionHistory",
     "SubscriptionPlan",

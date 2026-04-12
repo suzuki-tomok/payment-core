@@ -8,6 +8,7 @@ from .models import (
     CompanyUsageHistory,
     CreditHistory,
     CreditPlan,
+    InvoiceHistory,
     StripeCustomer,
     SubscriptionHistory,
     SubscriptionPlan,
@@ -80,8 +81,8 @@ class CreditPlanAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
 @admin.register(CreditHistory)
 class CreditHistoryAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
     resource_class = CreditHistoryResource
-    list_display = ("id", "stripe_customer", "credit_plan", "is_active", "created_at")
-    list_filter = ("is_active",)
+    list_display = ("id", "stripe_customer", "credit_plan", "status", "created_at")
+    list_filter = ("status",)
     search_fields = ("stripe_payment_id",)
 
 
@@ -91,6 +92,13 @@ class CompanyUsageHistoryAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[t
     list_display = ("id", "company", "user", "type", "source", "created_at")
     list_filter = ("type", "source")
     search_fields = ("company__name",)
+
+
+@admin.register(InvoiceHistory)
+class InvoiceHistoryAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = ("id", "stripe_customer", "description", "amount", "status", "created_at")
+    list_filter = ("status",)
+    search_fields = ("description", "stripe_payment_id")
 
 
 @admin.register(CheckoutSession)

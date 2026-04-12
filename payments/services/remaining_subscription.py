@@ -25,19 +25,15 @@ class RemainingSubscriptionService:
     def get_remaining(company: Company) -> RemainingSubscriptionDto:
         """サブスクリプションの残量を取得."""
 
-        # 最新のサブスクリプション履歴を取得し、有効かどうか判定
+        # 有効な（active/trialing）サブスクリプションを取得
         subscription = (
             SubscriptionHistory.objects.filter(
                 stripe_customer__company=company,
+                status__in=["created", "updated"],
             )
             .select_related("subscription_plan")
-            .order_by("-created_at")
             .first()
         )
-
-        # 最新レコードが active/trialing でなければ未契約扱い
-        if subscription and subscription.status not in ("active", "trialing"):
-            subscription = None
 
         # サブスク未契約の場合
         if not subscription:

@@ -4,6 +4,7 @@ from .checkout import (
     checkout_status_view,
     checkout_success_view,
     credit_checkout_view,
+    custom_checkout_view,
     subscription_checkout_view,
 )
 from .dashboard import dashboard_view
@@ -15,6 +16,7 @@ __all__ = [
     "checkout_status_view",
     "checkout_success_view",
     "credit_checkout_view",
+    "custom_checkout_view",
     "dashboard_view",
     "export_all",
     "login_view",

@@ -10,6 +10,7 @@ from ..models import (
     CompanyUsageHistory,
     CreditHistory,
     CreditPlan,
+    InvoiceHistory,
     StripeCustomer,
     SubscriptionHistory,
     SubscriptionPlan,
@@ -37,12 +38,17 @@ MODELS = [
     (
         "CreditHistory",
         CreditHistory,
-        ["id", "stripe_customer_id", "credit_plan_id", "stripe_payment_id", "is_active", "created_at"],
+        ["id", "stripe_customer_id", "credit_plan_id", "stripe_payment_id", "status", "created_at"],
     ),
     (
         "CompanyUsageHistory",
         CompanyUsageHistory,
         ["id", "company_id", "user_id", "type", "source", "created_at"],
+    ),
+    (
+        "InvoiceHistory",
+        InvoiceHistory,
+        ["id", "stripe_customer_id", "description", "amount", "stripe_payment_id", "status", "created_at"],
     ),
     (
         "CheckoutSession",

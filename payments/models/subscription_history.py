@@ -6,11 +6,9 @@ from .subscription_plan import SubscriptionPlan
 
 class SubscriptionHistory(models.Model):
     class Status(models.TextChoices):
-        ACTIVE = "active", "Active"
-        TRIALING = "trialing", "Trialing"
-        PAST_DUE = "past_due", "Past Due"
-        CANCELED = "canceled", "Canceled"
-        UNPAID = "unpaid", "Unpaid"
+        CREATED = "created", "Created"
+        UPDATED = "updated", "Updated"
+        DELETED = "deleted", "Deleted"
 
     stripe_customer = models.ForeignKey(
         StripeCustomer, on_delete=models.CASCADE, related_name="subscription_histories"
@@ -18,7 +16,7 @@ class SubscriptionHistory(models.Model):
     subscription_plan = models.ForeignKey(
         SubscriptionPlan, on_delete=models.PROTECT, related_name="subscription_histories"
     )
-    stripe_subscription_id = models.CharField(max_length=255)
+    stripe_subscription_id = models.CharField(max_length=255, unique=True)
     status = models.CharField(max_length=20, choices=Status.choices)
     current_period_start = models.DateTimeField()
     current_period_end = models.DateTimeField()

@@ -6,6 +6,7 @@ from .models import (
     CompanyUsageHistory,
     CreditHistory,
     CreditPlan,
+    InvoiceHistory,
     StripeCustomer,
     SubscriptionHistory,
     SubscriptionPlan,
@@ -45,6 +46,11 @@ class CreditHistoryResource(resources.ModelResource):
 class CompanyUsageHistoryResource(resources.ModelResource):
     class Meta:
         model = CompanyUsageHistory
+
+
+class InvoiceHistoryResource(resources.ModelResource):
+    class Meta:
+        model = InvoiceHistory
 
 
 class CheckoutSessionResource(resources.ModelResource):

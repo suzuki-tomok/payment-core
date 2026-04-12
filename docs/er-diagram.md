@@ -11,6 +11,7 @@ erDiagram
     SubscriptionHistory }o--|| SubscriptionPlan : "N:1"
     StripeCustomer ||--o{ CreditHistory : "1:N"
     CreditHistory }o--|| CreditPlan : "N:1"
+    StripeCustomer ||--o{ InvoiceHistory : "1:N"
 
     User {
         int id PK
@@ -83,7 +84,7 @@ erDiagram
         int stripe_customer_id FK
         int credit_plan_id FK
         string stripe_payment_id
-        boolean is_active
+        string status
         datetime created_at
         datetime updated_at
     }
@@ -97,18 +98,30 @@ erDiagram
         datetime created_at
         datetime updated_at
     }
+
+    InvoiceHistory {
+        int id PK
+        int stripe_customer_id FK
+        string description
+        int amount
+        string stripe_payment_id
+        string status
+        datetime created_at
+        datetime updated_at
+    }
 ```
 
-## テーブル役割
+## テーブル責務
 
-| テーブル | 責務 |
-|---------|------|
-| User | ユーザー（Django AbstractUser拡張、Companyに所属） |
-| Company | 会社情報 |
-| StripeCustomer | Stripe顧客紐付け |
-| CompanyUsageHistory | 使用履歴（type: document/ai_chat、source: subscription/credit） |
-| CheckoutSession | 決済セッション追跡 |
-| SubscriptionHistory | サブスク契約履歴（Stripe連動） |
-| SubscriptionPlan | 月額プラン定義（静的マスタ） |
-| CreditHistory | クレジット購入履歴（is_activeで無効化可能） |
-| CreditPlan | クレジットパック定義（静的マスタ） |
+| テーブル | 責務 | 状態管理 |
+|---------|------|---------|
+| User | ユーザー（Django AbstractUser拡張、Companyに所属） | - |
+| Company | 会社情報 | - |
+| StripeCustomer | Stripe顧客紐付け | - |
+| CompanyUsageHistory | 使用履歴（type: document/ai_chat、source: subscription/credit） | - |
+| CheckoutSession | 決済セッション追跡（ポーリング用） | pending → completed |
+| SubscriptionHistory | サブスク契約（1 subscription_id = 1レコード、UPDATE） | created → updated → deleted |
+| SubscriptionPlan | 月額プラン定義（静的マスタ） | - |
+| CreditHistory | クレジット購入（1 payment_id = 1レコード、UPDATE） | completed → refunded |
+| CreditPlan | クレジットパック定義（静的マスタ） | - |
+| InvoiceHistory | カスタム支払い（1 payment_id = 1レコード、UPDATE） | completed → refunded |

@@ -7,6 +7,7 @@ class CheckoutSession(models.Model):
     class Type(models.TextChoices):
         SUBSCRIPTION = "subscription", "Subscription"
         CREDIT = "credit", "Credit"
+        CUSTOM = "custom", "Custom"
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"

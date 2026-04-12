@@ -100,4 +100,17 @@
         {% endfor %}
     </div>
 </div>
+
+<!-- カスタム支払い -->
+<div class="card">
+    <h2>カスタム支払い</h2>
+    <form method="post" action="{% url 'custom_checkout' %}" style="max-width: 400px;">
+        {% csrf_token %}
+        <label for="description">説明</label>
+        <input type="text" name="description" id="description" placeholder="例: コンサルティング費用" required>
+        <label for="amount">金額（円）</label>
+        <input type="text" name="amount" id="amount" placeholder="例: 5000" required>
+        <button type="submit" class="btn btn-primary" style="margin-top: 8px;">支払う</button>
+    </form>
+</div>
 {% endblock %}

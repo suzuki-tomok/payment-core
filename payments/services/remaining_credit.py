@@ -22,10 +22,10 @@ class RemainingCreditService:
     def get_remaining(company: Company) -> RemainingCreditDto:
         """クレジットの残量を取得."""
 
-        # 有効な（is_active=True）購入履歴から合計クレジット数を算出
+        # 有効な（status=completed）購入履歴から合計クレジット数を算出
         credit_histories = CreditHistory.objects.filter(
             stripe_customer__company=company,
-            is_active=True,
+            status="completed",
         ).select_related("credit_plan")
 
         total_document = 0
