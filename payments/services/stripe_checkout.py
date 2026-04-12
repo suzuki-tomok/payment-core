@@ -34,7 +34,11 @@ class StripeCheckoutService:
             return StripeCustomer.objects.get(company=company)
         except StripeCustomer.DoesNotExist:
             logger.info("Creating Stripe Customer for company=%s", company.name)
-            customer = stripe.Customer.create(name=company.name)
+            try:
+                customer = stripe.Customer.create(name=company.name)
+            except Exception:
+                logger.exception("Failed to create Stripe Customer for company=%s", company.name)
+                raise
             return StripeCustomer.objects.create(
                 company=company,
                 stripe_customer_id=customer.id,
@@ -56,13 +60,17 @@ class StripeCheckoutService:
         2. DB に CheckoutSession を保存（status=pending）
         3. Session を返す（呼び出し元が session.url にリダイレクト）
         """
-        session = stripe.checkout.Session.create(
-            customer=stripe_customer.stripe_customer_id,
-            mode="subscription",
-            line_items=[{"price": plan.stripe_price_id, "quantity": 1}],
-            success_url=f"{base_url}checkout/success/?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{base_url}checkout/cancel/",
-        )
+        try:
+            session = stripe.checkout.Session.create(
+                customer=stripe_customer.stripe_customer_id,
+                mode="subscription",
+                line_items=[{"price": plan.stripe_price_id, "quantity": 1}],
+                success_url=f"{base_url}checkout/success/?session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{base_url}checkout/cancel/",
+            )
+        except Exception:
+            logger.exception("Failed to create subscription checkout")
+            raise
         CheckoutSession.objects.create(
             stripe_customer=stripe_customer,
             stripe_session_id=session.id,
@@ -83,13 +91,17 @@ class StripeCheckoutService:
         2. DB に CheckoutSession を保存（status=pending）
         3. Session を返す（呼び出し元が session.url にリダイレクト）
         """
-        session = stripe.checkout.Session.create(
-            customer=stripe_customer.stripe_customer_id,
-            mode="payment",
-            line_items=[{"price": credit_plan.stripe_price_id, "quantity": 1}],
-            success_url=f"{base_url}checkout/success/?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{base_url}checkout/cancel/",
-        )
+        try:
+            session = stripe.checkout.Session.create(
+                customer=stripe_customer.stripe_customer_id,
+                mode="payment",
+                line_items=[{"price": credit_plan.stripe_price_id, "quantity": 1}],
+                success_url=f"{base_url}checkout/success/?session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{base_url}checkout/cancel/",
+            )
+        except Exception:
+            logger.exception("Failed to create credit checkout")
+            raise
         CheckoutSession.objects.create(
             stripe_customer=stripe_customer,
             stripe_session_id=session.id,
@@ -111,20 +123,24 @@ class StripeCheckoutService:
         2. DB に CheckoutSession を保存（status=pending）
         3. Session を返す（呼び出し元が session.url にリダイレクト）
         """
-        session = stripe.checkout.Session.create(
-            customer=stripe_customer.stripe_customer_id,
-            mode="payment",
-            line_items=[{
-                "price_data": {
-                    "currency": "jpy",
-                    "unit_amount": amount,
-                    "product_data": {"name": description},
-                },
-                "quantity": 1,
-            }],
-            success_url=f"{base_url}checkout/success/?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{base_url}checkout/cancel/",
-        )
+        try:
+            session = stripe.checkout.Session.create(
+                customer=stripe_customer.stripe_customer_id,
+                mode="payment",
+                line_items=[{
+                    "price_data": {
+                        "currency": "jpy",
+                        "unit_amount": amount,
+                        "product_data": {"name": description},
+                    },
+                    "quantity": 1,
+                }],
+                success_url=f"{base_url}checkout/success/?session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{base_url}checkout/cancel/",
+            )
+        except Exception:
+            logger.exception("Failed to create custom checkout: amount=%d", amount)
+            raise
         CheckoutSession.objects.create(
             stripe_customer=stripe_customer,
             stripe_session_id=session.id,

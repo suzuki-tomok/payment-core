@@ -1,7 +1,6 @@
 import json
 import logging
 
-import stripe
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
@@ -35,9 +34,9 @@ def subscription_checkout_view(request: HttpRequest) -> HttpResponse:
             stripe_customer, plan, request.build_absolute_uri("/"),
         )
         return redirect(session.url or "dashboard")
-    except stripe.StripeError:
-        logger.exception("Stripe API error in subscription checkout")
-        return render(request, ERROR_TEMPLATE, {"message": "決済サービスとの通信に失敗しました。"})
+    except Exception:
+        logger.exception("Error in subscription checkout")
+        return render(request, ERROR_TEMPLATE, {"message": "エラーが発生しました。"})
 
 
 @login_required
@@ -61,9 +60,9 @@ def credit_checkout_view(request: HttpRequest) -> HttpResponse:
             stripe_customer, credit_plan, request.build_absolute_uri("/"),
         )
         return redirect(session.url or "dashboard")
-    except stripe.StripeError:
-        logger.exception("Stripe API error in credit checkout")
-        return render(request, ERROR_TEMPLATE, {"message": "決済サービスとの通信に失敗しました。"})
+    except Exception:
+        logger.exception("Error in credit checkout")
+        return render(request, ERROR_TEMPLATE, {"message": "エラーが発生しました。"})
 
 
 @login_required
@@ -88,9 +87,9 @@ def custom_checkout_view(request: HttpRequest) -> HttpResponse:
             stripe_customer, amount, description.strip(), request.build_absolute_uri("/"),
         )
         return redirect(session.url or "dashboard")
-    except stripe.StripeError:
-        logger.exception("Stripe API error in custom checkout")
-        return render(request, ERROR_TEMPLATE, {"message": "決済サービスとの通信に失敗しました。"})
+    except Exception:
+        logger.exception("Error in custom checkout")
+        return render(request, ERROR_TEMPLATE, {"message": "エラーが発生しました。"})
 
 
 @login_required

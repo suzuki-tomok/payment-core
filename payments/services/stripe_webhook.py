@@ -70,15 +70,20 @@ class StripeWebhookService:
         1. Stripe API で Session を取得し payment_intent_id と price_id を特定
         2. CreditPlan を特定して CreditHistory を作成
         """
-        session = stripe.checkout.Session.retrieve(
-            checkout.stripe_session_id, expand=["line_items"]
-        )
+        try:
+            session = stripe.checkout.Session.retrieve(
+                checkout.stripe_session_id, expand=["line_items"]
+            )
+        except Exception:
+            logger.exception("Failed to retrieve Session: session_id=%s", checkout.stripe_session_id)
+            raise
         payment_intent_id = session.payment_intent
         price_id = session.line_items.data[0].price.id  # type: ignore[union-attr]
 
         try:
             credit_plan = CreditPlan.objects.get(stripe_price_id=price_id)
         except CreditPlan.DoesNotExist:
+            logger.warning("CreditPlan not found: price_id=%s", price_id)
             return
 
         _, created = CreditHistory.objects.get_or_create(
@@ -100,9 +105,13 @@ class StripeWebhookService:
         1. Stripe API で Session を取得し payment_intent_id と商品情報を特定
         2. InvoiceHistory を作成
         """
-        session = stripe.checkout.Session.retrieve(
-            checkout.stripe_session_id, expand=["line_items"]
-        )
+        try:
+            session = stripe.checkout.Session.retrieve(
+                checkout.stripe_session_id, expand=["line_items"]
+            )
+        except Exception:
+            logger.exception("Failed to retrieve Session: session_id=%s", checkout.stripe_session_id)
+            raise
         payment_intent_id = session.payment_intent
         line_item = session.line_items.data[0]  # type: ignore[union-attr]
         description = line_item.description or "カスタム支払い"
@@ -132,7 +141,11 @@ class StripeWebhookService:
         stripe_subscription_id = data["id"]  # type: ignore[index]
 
         # Stripe API から最新のサブスク情報を取得
-        sub = stripe.Subscription.retrieve(stripe_subscription_id)
+        try:
+            sub = stripe.Subscription.retrieve(stripe_subscription_id)
+        except Exception:
+            logger.exception("Failed to retrieve Subscription: subscription_id=%s", stripe_subscription_id)
+            raise
         item = sub["items"]["data"][0]
         price_id = item["price"]["id"]
 
@@ -162,7 +175,11 @@ class StripeWebhookService:
         stripe_subscription_id = data["id"]  # type: ignore[index]
 
         # Stripe API から最新のサブスク情報を取得
-        sub = stripe.Subscription.retrieve(stripe_subscription_id)
+        try:
+            sub = stripe.Subscription.retrieve(stripe_subscription_id)
+        except Exception:
+            logger.exception("Failed to retrieve Subscription: subscription_id=%s", stripe_subscription_id)
+            raise
         item = sub["items"]["data"][0]
 
         period_start = datetime.fromtimestamp(item["current_period_start"], tz=UTC)

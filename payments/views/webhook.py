@@ -1,6 +1,5 @@
 import logging
 
-import stripe
 from django.http import HttpRequest, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -25,7 +24,7 @@ def webhook_view(request: HttpRequest) -> HttpResponse:
     # 署名検証: 失敗したら 400 を返す（不正リクエスト、リトライ不要）
     try:
         event = StripeWebhookService.verify_webhook(payload, sig_header)
-    except (ValueError, stripe.error.SignatureVerificationError):
+    except Exception:
         logger.warning("Webhook signature verification failed")
         return HttpResponse(status=400)
 
@@ -38,20 +37,14 @@ def webhook_view(request: HttpRequest) -> HttpResponse:
     try:
         match event_type:
             case "checkout.session.completed":
-                # Checkout 完了 → CheckoutSession.status を completed に
-                # type=credit なら CreditHistory INSERT、type=custom なら InvoiceHistory INSERT
                 StripeWebhookService.handle_checkout_completed(data)
             case "customer.subscription.created":
-                # サブスク契約 → SubscriptionHistory INSERT
                 StripeWebhookService.handle_subscription_created(data)
             case "customer.subscription.updated":
-                # サブスク更新（月次更新/プラン変更）→ SubscriptionHistory UPDATE
                 StripeWebhookService.handle_subscription_updated(data)
             case "customer.subscription.deleted":
-                # サブスク解約 → SubscriptionHistory UPDATE (deleted)
                 StripeWebhookService.handle_subscription_deleted(data)
             case "charge.refunded":
-                # 返金 → CreditHistory / InvoiceHistory UPDATE (refunded)
                 StripeWebhookService.handle_charge_refunded(data)
     except Exception:
         logger.exception("Webhook handler failed: event_type=%s", event_type)
