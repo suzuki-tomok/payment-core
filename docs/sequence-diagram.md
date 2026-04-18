@@ -48,12 +48,19 @@ sequenceDiagram
         end
 
     else 決済キャンセル
-        S-->>U: /checkout/cancel/ へリダイレクト
-        U->>D: GET /checkout/cancel/
+        S-->>U: /checkout/cancel/?session_id=xxx へリダイレクト
+        U->>D: GET /checkout/cancel/?session_id=xxx
+        D->>DB: CheckoutSessionStatus.status = canceled
         D-->>U: キャンセル画面表示
     end
 
     Note over U,S: 以降、Stripe が自動送信（Django は Webhook で受け取るだけ）
+
+    opt セッション期限切れ
+        S->>D: Webhook: checkout.session.expired
+        D->>DB: CheckoutSessionStatus.status = expired
+        D-->>S: 200 OK
+    end
 
     opt 契約直後
         S->>D: Webhook: customer.subscription.created
@@ -129,12 +136,19 @@ sequenceDiagram
         end
 
     else 決済キャンセル
-        S-->>U: /checkout/cancel/ へリダイレクト
-        U->>D: GET /checkout/cancel/
+        S-->>U: /checkout/cancel/?session_id=xxx へリダイレクト
+        U->>D: GET /checkout/cancel/?session_id=xxx
+        D->>DB: CheckoutSessionStatus.status = canceled
         D-->>U: キャンセル画面表示
     end
 
     Note over U,S: 以降、Stripe が自動送信（Django は Webhook で受け取るだけ）
+
+    opt セッション期限切れ
+        S->>D: Webhook: checkout.session.expired
+        D->>DB: CheckoutSessionStatus.status = expired
+        D-->>S: 200 OK
+    end
 
     opt 返金時
         S->>D: Webhook: charge.refunded
@@ -194,12 +208,19 @@ sequenceDiagram
         end
 
     else 決済キャンセル
-        S-->>U: /checkout/cancel/ へリダイレクト
-        U->>D: GET /checkout/cancel/
+        S-->>U: /checkout/cancel/?session_id=xxx へリダイレクト
+        U->>D: GET /checkout/cancel/?session_id=xxx
+        D->>DB: CheckoutSessionStatus.status = canceled
         D-->>U: キャンセル画面表示
     end
 
     Note over U,S: 以降、Stripe が自動送信（Django は Webhook で受け取るだけ）
+
+    opt セッション期限切れ
+        S->>D: Webhook: checkout.session.expired
+        D->>DB: CheckoutSessionStatus.status = expired
+        D-->>S: 200 OK
+    end
 
     opt 返金時
         S->>D: Webhook: charge.refunded

@@ -102,6 +102,12 @@ def checkout_success_view(request: HttpRequest) -> HttpResponse:
 @login_required
 def checkout_cancel_view(request: HttpRequest) -> HttpResponse:
     """Checkout キャンセル画面. ユーザーが決済をキャンセルした場合."""
+    session_id = request.GET.get("session_id", "")
+    if session_id:
+        CheckoutSessionStatus.objects.filter(
+            stripe_session_id=session_id,
+            status="pending",
+        ).update(status="canceled")
     return render(request, "payments/checkout_cancel.html")
 
 

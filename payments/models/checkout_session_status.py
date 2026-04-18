@@ -12,6 +12,7 @@ class CheckoutSessionStatus(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
         COMPLETED = "completed", "Completed"
+        CANCELED = "canceled", "Canceled"
         EXPIRED = "expired", "Expired"
 
     stripe_customer = models.ForeignKey(

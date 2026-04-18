@@ -57,6 +57,20 @@ class StripeWebhookService:
                 StripeWebhookService._create_invoice_history(checkout)  # noqa: SLF001
 
     @staticmethod
+    def handle_checkout_expired(data: object) -> None:
+        """Checkout 期限切れ: CheckoutSessionStatus.status を expired に更新."""
+        session_id = data["id"]  # type: ignore[index]
+        checkout = CheckoutSessionStatus.objects.filter(stripe_session_id=session_id).first()
+        if not checkout:
+            logger.warning("CheckoutSessionStatus not found: session_id=%s", session_id)
+            return
+
+        checkout.status = "expired"
+        checkout.save()
+        cid = checkout.stripe_customer.stripe_customer_id
+        logger.info("Checkout expired: sid=%s cus=%s", session_id, cid)
+
+    @staticmethod
     def _create_credit_history(checkout: CheckoutSessionStatus) -> None:
         """クレジット購入の CreditStatus を作成."""
         session = stripe.checkout.Session.retrieve(

@@ -43,7 +43,7 @@ class StripeCheckoutService:
             mode="subscription",
             line_items=[{"price": plan.stripe_price_id, "quantity": 1}],
             success_url=f"{base_url}checkout/success/?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{base_url}checkout/cancel/",
+            cancel_url=f"{base_url}checkout/cancel/?session_id={{CHECKOUT_SESSION_ID}}",
         )
         CheckoutSessionStatus.objects.create(
             stripe_customer=stripe_customer,
@@ -65,7 +65,7 @@ class StripeCheckoutService:
             mode="payment",
             line_items=[{"price": credit_plan.stripe_price_id, "quantity": 1}],
             success_url=f"{base_url}checkout/success/?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{base_url}checkout/cancel/",
+            cancel_url=f"{base_url}checkout/cancel/?session_id={{CHECKOUT_SESSION_ID}}",
         )
         CheckoutSessionStatus.objects.create(
             stripe_customer=stripe_customer,
@@ -95,7 +95,7 @@ class StripeCheckoutService:
                 "quantity": 1,
             }],
             success_url=f"{base_url}checkout/success/?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{base_url}checkout/cancel/",
+            cancel_url=f"{base_url}checkout/cancel/?session_id={{CHECKOUT_SESSION_ID}}",
         )
         CheckoutSessionStatus.objects.create(
             stripe_customer=stripe_customer,

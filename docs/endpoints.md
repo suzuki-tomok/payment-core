@@ -19,6 +19,7 @@
 | イベント | 処理 |
 |---------|------|
 | `checkout.session.completed` | CheckoutSessionStatus.status → completed。type=credit なら CreditStatus INSERT、type=custom なら InvoiceStatus INSERT |
+| `checkout.session.expired` | CheckoutSessionStatus.status → expired |
 | `customer.subscription.created` | SubscriptionStatus INSERT (status=created) |
 | `customer.subscription.updated` | SubscriptionStatus UPDATE (status=updated, period) |
 | `customer.subscription.deleted` | SubscriptionStatus UPDATE (status=deleted) |

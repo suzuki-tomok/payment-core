@@ -47,6 +47,8 @@ def webhook_view(request: HttpRequest) -> HttpResponse:
         match event_type:
             case "checkout.session.completed":
                 StripeWebhookService.handle_checkout_completed(data)
+            case "checkout.session.expired":
+                StripeWebhookService.handle_checkout_expired(data)
             case "customer.subscription.created":
                 StripeWebhookService.handle_subscription_created(data)
             case "customer.subscription.updated":

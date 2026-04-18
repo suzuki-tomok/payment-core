@@ -101,3 +101,4 @@ mypy .                # 型チェック
 - [ER図](docs/er-diagram.md)
 - [エンドポイント](docs/endpoints.md)
 - [シーケンス図](docs/sequence-diagram.md)
+- [状態遷移図](docs/state-diagram.md)
