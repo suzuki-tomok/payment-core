@@ -50,11 +50,11 @@ class TestGetRemaining:
         assert result.document_remaining == 97
         assert result.ai_chat_remaining == 48
 
-    def test_updated_status(
+    def test_active_status_after_update(
         self, company: Company, subscription_status: SubscriptionStatus,
     ) -> None:
-        """updated ステータスでも有効として扱う."""
-        subscription_status.status = "updated"
+        """active ステータス（更新後も）で有効として扱う."""
+        subscription_status.status = "active"
         subscription_status.save()
 
         result = RemainingSubscriptionService.get_remaining(company)
@@ -62,11 +62,11 @@ class TestGetRemaining:
         assert result.plan_name == "Standard"
         assert result.document_remaining == 100
 
-    def test_deleted_status(
+    def test_canceled_status(
         self, company: Company, subscription_status: SubscriptionStatus,
     ) -> None:
-        """deleted ステータスなら全部 0."""
-        subscription_status.status = "deleted"
+        """canceled ステータスなら全部 0."""
+        subscription_status.status = "canceled"
         subscription_status.save()
 
         result = RemainingSubscriptionService.get_remaining(company)

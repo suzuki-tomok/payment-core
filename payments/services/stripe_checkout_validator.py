@@ -24,7 +24,7 @@ class StripeCheckoutValidator:
         # 二重契約防止
         has_active = SubscriptionStatus.objects.filter(
             stripe_customer__company=user.company,
-            status__in=["created", "updated"],
+            status="active",
         ).exists()
         if has_active:
             return "既にサブスクリプションを契約中です。"

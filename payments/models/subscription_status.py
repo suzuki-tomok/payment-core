@@ -6,9 +6,9 @@ from .subscription_plan import SubscriptionPlan
 
 class SubscriptionStatus(models.Model):
     class Status(models.TextChoices):
-        CREATED = "created", "Created"
-        UPDATED = "updated", "Updated"
-        DELETED = "deleted", "Deleted"
+        ACTIVE = "active", "Active"
+        PAST_DUE = "past_due", "Past Due"
+        CANCELED = "canceled", "Canceled"
 
     stripe_customer = models.ForeignKey(
         StripeCustomer, on_delete=models.CASCADE, related_name="subscription_statuses"

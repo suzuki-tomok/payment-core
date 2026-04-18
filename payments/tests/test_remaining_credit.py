@@ -49,11 +49,11 @@ class TestGetRemaining:
         """複数回購入した場合、合計から使用量を引く."""
         CreditStatus.objects.create(
             stripe_customer=stripe_customer, credit_plan=credit_plan,
-            stripe_payment_id="pi_1", status="completed",
+            stripe_payment_id="pi_1", status="succeeded",
         )
         CreditStatus.objects.create(
             stripe_customer=stripe_customer, credit_plan=credit_plan,
-            stripe_payment_id="pi_2", status="completed",
+            stripe_payment_id="pi_2", status="succeeded",
         )
 
         for _ in range(5):
@@ -74,7 +74,7 @@ class TestGetRemaining:
         """refunded のクレジットは残量に含まない."""
         CreditStatus.objects.create(
             stripe_customer=stripe_customer, credit_plan=credit_plan,
-            stripe_payment_id="pi_1", status="completed",
+            stripe_payment_id="pi_1", status="succeeded",
         )
         CreditStatus.objects.create(
             stripe_customer=stripe_customer, credit_plan=credit_plan,

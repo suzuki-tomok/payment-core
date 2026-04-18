@@ -29,7 +29,7 @@ class TestValidateSubscription:
         self, user: User, subscription_plan: SubscriptionPlan, subscription_status: SubscriptionStatus,
     ) -> None:
         """解約済み（deleted）なら新規契約できる."""
-        subscription_status.status = "deleted"
+        subscription_status.status = "canceled"
         subscription_status.save()
         assert StripeCheckoutValidator.validate_subscription(user, str(subscription_plan.id)) is None
 

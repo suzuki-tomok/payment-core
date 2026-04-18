@@ -141,7 +141,7 @@ class StripeWebhookService:
             stripe_subscription_id=stripe_subscription_id,
             stripe_customer=stripe_customer,
             subscription_plan=plan,
-            status="created",
+            status=sub["status"],
             current_period_start=period_start,
             current_period_end=period_end,
         )
@@ -174,7 +174,7 @@ class StripeWebhookService:
             stripe_subscription_id=stripe_subscription_id
         ).update(
             subscription_plan=plan,
-            status="updated",
+            status=sub["status"],
             current_period_start=period_start,
             current_period_end=period_end,
         )
@@ -183,13 +183,13 @@ class StripeWebhookService:
 
     @staticmethod
     def handle_subscription_deleted(data: object) -> None:
-        """サブスク解約時: SubscriptionStatus.status を deleted に UPDATE."""
+        """サブスク解約時: SubscriptionStatus.status を canceled に UPDATE."""
         stripe_subscription_id = data["id"]  # type: ignore[index]
         SubscriptionStatus.objects.filter(
             stripe_subscription_id=stripe_subscription_id
-        ).update(status="deleted")
+        ).update(status="canceled")
         stripe_customer_id = data["customer"]  # type: ignore[index]
-        logger.info("SubStatus deleted: sub=%s cus=%s", stripe_subscription_id, stripe_customer_id)
+        logger.info("SubStatus canceled: sub=%s cus=%s", stripe_subscription_id, stripe_customer_id)
 
     # ========================================
     # charge.refunded

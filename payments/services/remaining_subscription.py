@@ -25,11 +25,11 @@ class RemainingSubscriptionService:
     def get_remaining(company: Company) -> RemainingSubscriptionDto:
         """サブスクリプションの残量を取得."""
 
-        # 有効な（active/trialing）サブスクリプションを取得
+        # 有効な（active）サブスクリプションを取得
         subscription = (
             SubscriptionStatus.objects.filter(
                 stripe_customer__company=company,
-                status__in=["created", "updated"],
+                status="active",
             )
             .select_related("subscription_plan")
             .first()

@@ -128,9 +128,9 @@ erDiagram
 | StripeCustomer | Stripe顧客紐付け | - |
 | CompanyUsageHistory | 使用履歴（type: document/ai_chat、source: subscription/credit） | INSERT only |
 | CheckoutSessionStatus | 決済セッション状態追跡（ポーリング用） | pending → completed / canceled / expired |
-| SubscriptionStatus | サブスク契約状態（1 subscription_id = 1レコード、UPDATE） | created → updated → deleted |
+| SubscriptionStatus | サブスク契約状態（1 subscription_id = 1レコード、UPDATE） | active / past_due / canceled |
 | SubscriptionPlan | 月額プラン定義（静的マスタ） | - |
-| CreditStatus | クレジット購入状態（1 payment_id = 1レコード、UPDATE） | completed → refunded |
+| CreditStatus | クレジット購入状態（1 payment_id = 1レコード、UPDATE） | succeeded / refunded |
 | CreditPlan | クレジットパック定義（静的マスタ） | - |
-| InvoiceStatus | カスタム支払い状態（1 payment_id = 1レコード、UPDATE） | completed → refunded |
+| InvoiceStatus | カスタム支払い状態（1 payment_id = 1レコード、UPDATE） | succeeded / refunded |
 | WebhookEventLog | Webhookイベントログ（冪等性管理） | INSERT only |

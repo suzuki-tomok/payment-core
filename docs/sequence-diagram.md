@@ -66,7 +66,7 @@ sequenceDiagram
         S->>D: Webhook: customer.subscription.created
         D->>S: Subscription.retrieve(sub_xxx)
         S-->>D: items.data[0] {price_id, current_period_start, current_period_end}
-        D->>DB: SubscriptionStatus INSERT (status=created)
+        D->>DB: SubscriptionStatus INSERT (status=active)
         D-->>S: 200 OK
     end
 
@@ -74,13 +74,13 @@ sequenceDiagram
         S->>D: Webhook: customer.subscription.updated
         D->>S: Subscription.retrieve(sub_xxx)
         S-->>D: items.data[0] {price_id, current_period_start, current_period_end}
-        D->>DB: SubscriptionStatus UPDATE (status=updated, period)
+        D->>DB: SubscriptionStatus UPDATE (status=active/past_due, period)
         D-->>S: 200 OK
     end
 
     opt 解約時
         S->>D: Webhook: customer.subscription.deleted
-        D->>DB: SubscriptionStatus UPDATE (status=deleted)
+        D->>DB: SubscriptionStatus UPDATE (status=canceled)
         D-->>S: 200 OK
     end
 ```
@@ -121,7 +121,7 @@ sequenceDiagram
         D->>DB: CheckoutSessionStatus.status = completed
         D->>S: Session.retrieve(cs_xxx, expand=["line_items"])
         S-->>D: payment_intent, line_items.data[0].price.id
-        D->>DB: CreditStatus INSERT (status=completed)
+        D->>DB: CreditStatus INSERT (status=succeeded)
         D-->>S: 200 OK
 
         loop ポーリング（2秒間隔・最大60秒）
@@ -193,7 +193,7 @@ sequenceDiagram
         D->>DB: CheckoutSessionStatus.status = completed
         D->>S: Session.retrieve(cs_xxx, expand=["line_items"])
         S-->>D: payment_intent, line_items.data[0].price_data
-        D->>DB: InvoiceStatus INSERT (description, amount, status=completed)
+        D->>DB: InvoiceStatus INSERT (description, amount, status=succeeded)
         D-->>S: 200 OK
 
         loop ポーリング（2秒間隔・最大60秒）
@@ -241,19 +241,19 @@ sequenceDiagram
 
     Note over D,DB: サブスク残量計算
 
-    D->>DB: SubscriptionStatus (status=created/updated) を取得
+    D->>DB: SubscriptionStatus (status=active) を取得
     alt 有効なサブスクあり
         D->>DB: CompanyUsageHistory COUNT (source=subscription, type=document, サブスク期間内)
         D->>D: ドキュメント残 = monthly_document_limit - 使用数
         D->>DB: CompanyUsageHistory COUNT (source=subscription, type=ai_chat, サブスク期間内)
         D->>D: AIチャット残 = monthly_ai_chat_limit - 使用数
-    else 未契約/deleted
+    else 未契約/canceled/past_due
         D->>D: ドキュメント残 = 0, AIチャット残 = 0
     end
 
     Note over D,DB: クレジット残量計算
 
-    D->>DB: CreditStatus (status=completed) → CreditPlan のドキュメント/AIチャット合計
+    D->>DB: CreditStatus (status=succeeded) → CreditPlan のドキュメント/AIチャット合計
     D->>DB: CompanyUsageHistory COUNT (source=credit, type=document)
     D->>D: ドキュメント残 = 購入合計 - 消費数
     D->>DB: CompanyUsageHistory COUNT (source=credit, type=ai_chat)

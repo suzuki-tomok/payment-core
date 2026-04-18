@@ -54,7 +54,7 @@ class TestHandleCheckoutCompleted:
 
         credit_status = CreditStatus.objects.get(stripe_payment_id="pi_credit123")
         assert credit_status.credit_plan == credit_plan
-        assert credit_status.status == "completed"
+        assert credit_status.status == "succeeded"
 
     @patch("payments.services.stripe_webhook.stripe.checkout.Session.retrieve")
     def test_custom_type(
@@ -75,7 +75,7 @@ class TestHandleCheckoutCompleted:
         invoice = InvoiceStatus.objects.get(stripe_payment_id="pi_custom123")
         assert invoice.description == "コンサル費用"
         assert invoice.amount == 5000
-        assert invoice.status == "completed"
+        assert invoice.status == "succeeded"
 
     def test_session_not_found(self) -> None:
         """存在しない session_id なら何もしない."""
@@ -104,7 +104,7 @@ class TestHandleSubscriptionCreated:
         })
 
         history = SubscriptionStatus.objects.get(stripe_subscription_id="sub_new123")
-        assert history.status == "created"
+        assert history.status == "active"
         assert history.subscription_plan == subscription_plan
 
 
@@ -124,7 +124,7 @@ class TestHandleSubscriptionUpdated:
         StripeWebhookService.handle_subscription_updated({"id": "sub_test123", "customer": "cus_test123"})
 
         subscription_status.refresh_from_db()
-        assert subscription_status.status == "updated"
+        assert subscription_status.status == "active"
 
 
 @pytest.mark.django_db
@@ -136,7 +136,7 @@ class TestHandleSubscriptionDeleted:
         StripeWebhookService.handle_subscription_deleted({"id": "sub_test123", "customer": "cus_test123"})
 
         subscription_status.refresh_from_db()
-        assert subscription_status.status == "deleted"
+        assert subscription_status.status == "canceled"
 
 
 @pytest.mark.django_db
@@ -157,7 +157,7 @@ class TestHandleChargeRefunded:
             description="テスト",
             amount=5000,
             stripe_payment_id="pi_invoice123",
-            status="completed",
+            status="succeeded",
         )
 
         StripeWebhookService.handle_charge_refunded({"payment_intent": "pi_invoice123", "customer": "cus_test123"})

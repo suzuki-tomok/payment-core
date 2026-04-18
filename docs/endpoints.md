@@ -18,9 +18,9 @@
 
 | イベント | 処理 |
 |---------|------|
-| `checkout.session.completed` | CheckoutSessionStatus.status → completed。type=credit なら CreditStatus INSERT、type=custom なら InvoiceStatus INSERT |
+| `checkout.session.completed` | CheckoutSessionStatus.status → completed。type=credit なら CreditStatus INSERT (succeeded)、type=custom なら InvoiceStatus INSERT (succeeded) |
 | `checkout.session.expired` | CheckoutSessionStatus.status → expired |
-| `customer.subscription.created` | SubscriptionStatus INSERT (status=created) |
-| `customer.subscription.updated` | SubscriptionStatus UPDATE (status=updated, period) |
-| `customer.subscription.deleted` | SubscriptionStatus UPDATE (status=deleted) |
+| `customer.subscription.created` | SubscriptionStatus INSERT (status=active) |
+| `customer.subscription.updated` | SubscriptionStatus UPDATE (status=active/past_due, plan, period) |
+| `customer.subscription.deleted` | SubscriptionStatus UPDATE (status=canceled) |
 | `charge.refunded` | CreditStatus / InvoiceStatus UPDATE (status=refunded) |

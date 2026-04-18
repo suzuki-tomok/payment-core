@@ -54,7 +54,7 @@ def subscription_status(
         stripe_customer=stripe_customer,
         subscription_plan=subscription_plan,
         stripe_subscription_id="sub_test123",
-        status="created",
+        status="active",
         current_period_start=datetime(2026, 4, 1, tzinfo=UTC),
         current_period_end=datetime(2026, 5, 1, tzinfo=UTC),
     )
@@ -81,5 +81,5 @@ def credit_status(
         stripe_customer=stripe_customer,
         credit_plan=credit_plan,
         stripe_payment_id="pi_test123",
-        status="completed",
+        status="succeeded",
     )

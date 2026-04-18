@@ -5,14 +5,14 @@ from .stripe_customer import StripeCustomer
 
 class InvoiceStatus(models.Model):
     class Status(models.TextChoices):
-        COMPLETED = "completed", "Completed"
+        SUCCEEDED = "succeeded", "Succeeded"
         REFUNDED = "refunded", "Refunded"
 
     stripe_customer = models.ForeignKey(StripeCustomer, on_delete=models.CASCADE, related_name="invoice_statuses")
     description = models.CharField(max_length=255)
     amount = models.IntegerField()
     stripe_payment_id = models.CharField(max_length=255, unique=True)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.COMPLETED)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.SUCCEEDED)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
