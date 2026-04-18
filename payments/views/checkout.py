@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
-from ..models import CheckoutSession, CreditPlan, SubscriptionPlan, User
+from ..models import CheckoutSessionStatus, CreditPlan, SubscriptionPlan, User
 from ..services import StripeCheckoutService, StripeCheckoutValidator
 
 logger = logging.getLogger(__name__)
@@ -107,13 +107,13 @@ def checkout_cancel_view(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def checkout_status_view(request: HttpRequest) -> HttpResponse:
-    """CheckoutSession のステータスを JSON で返す."""
+    """CheckoutSessionStatus のステータスを JSON で返す."""
     session_id = request.GET.get("session_id", "")
 
     try:
-        checkout = CheckoutSession.objects.get(stripe_session_id=session_id)
+        checkout = CheckoutSessionStatus.objects.get(stripe_session_id=session_id)
         status = checkout.status
-    except CheckoutSession.DoesNotExist:
+    except CheckoutSessionStatus.DoesNotExist:
         status = "not_found"
 
     return HttpResponse(

@@ -5,16 +5,17 @@ from django.http import HttpRequest, HttpResponse
 from openpyxl import Workbook
 
 from ..models import (
-    CheckoutSession,
+    CheckoutSessionStatus,
     Company,
     CompanyUsageHistory,
-    CreditHistory,
     CreditPlan,
-    InvoiceHistory,
+    CreditStatus,
+    InvoiceStatus,
     StripeCustomer,
-    SubscriptionHistory,
     SubscriptionPlan,
+    SubscriptionStatus,
     User,
+    WebhookEventLog,
 )
 
 MODELS = [
@@ -27,8 +28,8 @@ MODELS = [
         ["id", "name", "stripe_price_id", "monthly_document_limit", "monthly_ai_chat_limit", "created_at"],
     ),
     (
-        "SubscriptionHistory",
-        SubscriptionHistory,
+        "SubscriptionStatus",
+        SubscriptionStatus,
         [
             "id", "stripe_customer_id", "subscription_plan_id",
             "stripe_subscription_id", "status", "current_period_start", "current_period_end", "created_at",
@@ -36,8 +37,8 @@ MODELS = [
     ),
     ("CreditPlan", CreditPlan, ["id", "name", "stripe_price_id", "document_credits", "ai_chat_credits", "created_at"]),
     (
-        "CreditHistory",
-        CreditHistory,
+        "CreditStatus",
+        CreditStatus,
         ["id", "stripe_customer_id", "credit_plan_id", "stripe_payment_id", "status", "created_at"],
     ),
     (
@@ -46,14 +47,19 @@ MODELS = [
         ["id", "company_id", "user_id", "type", "source", "created_at"],
     ),
     (
-        "InvoiceHistory",
-        InvoiceHistory,
+        "InvoiceStatus",
+        InvoiceStatus,
         ["id", "stripe_customer_id", "description", "amount", "stripe_payment_id", "status", "created_at"],
     ),
     (
-        "CheckoutSession",
-        CheckoutSession,
+        "CheckoutSessionStatus",
+        CheckoutSessionStatus,
         ["id", "stripe_customer_id", "stripe_session_id", "type", "status", "created_at"],
+    ),
+    (
+        "WebhookEventLog",
+        WebhookEventLog,
+        ["id", "event_id", "event_type", "stripe_customer_id", "created_at"],
     ),
 ]
 

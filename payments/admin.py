@@ -3,26 +3,29 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from import_export.admin import ExportMixin
 
 from .models import (
-    CheckoutSession,
+    CheckoutSessionStatus,
     Company,
     CompanyUsageHistory,
-    CreditHistory,
     CreditPlan,
-    InvoiceHistory,
+    CreditStatus,
+    InvoiceStatus,
     StripeCustomer,
-    SubscriptionHistory,
     SubscriptionPlan,
+    SubscriptionStatus,
     User,
+    WebhookEventLog,
 )
 from .resources import (
-    CheckoutSessionResource,
+    CheckoutSessionStatusResource,
     CompanyResource,
     CompanyUsageHistoryResource,
-    CreditHistoryResource,
     CreditPlanResource,
+    CreditStatusResource,
+    InvoiceStatusResource,
     StripeCustomerResource,
-    SubscriptionHistoryResource,
     SubscriptionPlanResource,
+    SubscriptionStatusResource,
+    WebhookEventLogResource,
 )
 
 
@@ -61,9 +64,9 @@ class SubscriptionPlanAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type
     search_fields = ("name",)
 
 
-@admin.register(SubscriptionHistory)
-class SubscriptionHistoryAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
-    resource_class = SubscriptionHistoryResource
+@admin.register(SubscriptionStatus)
+class SubscriptionStatusAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    resource_class = SubscriptionStatusResource
     list_display = (
         "id", "stripe_customer", "subscription_plan", "status", "current_period_start", "current_period_end",
     )
@@ -78,9 +81,9 @@ class CreditPlanAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
     search_fields = ("name",)
 
 
-@admin.register(CreditHistory)
-class CreditHistoryAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
-    resource_class = CreditHistoryResource
+@admin.register(CreditStatus)
+class CreditStatusAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    resource_class = CreditStatusResource
     list_display = ("id", "stripe_customer", "credit_plan", "status", "created_at")
     list_filter = ("status",)
     search_fields = ("stripe_payment_id",)
@@ -94,16 +97,25 @@ class CompanyUsageHistoryAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[t
     search_fields = ("company__name",)
 
 
-@admin.register(InvoiceHistory)
-class InvoiceHistoryAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+@admin.register(InvoiceStatus)
+class InvoiceStatusAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    resource_class = InvoiceStatusResource
     list_display = ("id", "stripe_customer", "description", "amount", "status", "created_at")
     list_filter = ("status",)
     search_fields = ("description", "stripe_payment_id")
 
 
-@admin.register(CheckoutSession)
-class CheckoutSessionAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
-    resource_class = CheckoutSessionResource
+@admin.register(CheckoutSessionStatus)
+class CheckoutSessionStatusAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    resource_class = CheckoutSessionStatusResource
     list_display = ("id", "stripe_customer", "type", "status", "created_at")
     list_filter = ("type", "status")
     search_fields = ("stripe_session_id",)
+
+
+@admin.register(WebhookEventLog)
+class WebhookEventLogAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg]
+    resource_class = WebhookEventLogResource
+    list_display = ("id", "event_id", "event_type", "stripe_customer_id", "created_at")
+    list_filter = ("event_type",)
+    search_fields = ("event_id", "stripe_customer_id")

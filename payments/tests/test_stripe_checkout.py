@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from payments.models import CheckoutSession, Company, CreditPlan, StripeCustomer, SubscriptionPlan
+from payments.models import CheckoutSessionStatus, Company, CreditPlan, StripeCustomer, SubscriptionPlan
 from payments.services import StripeCheckoutService
 
 
@@ -42,7 +42,7 @@ class TestCreateSubscriptionCheckout:
         stripe_customer: StripeCustomer,
         subscription_plan: SubscriptionPlan,
     ) -> None:
-        """Stripe Session を作成し、CheckoutSession を DB に保存."""
+        """Stripe Session を作成し、CheckoutSessionStatus を DB に保存."""
         mock_create.return_value = MagicMock(id="cs_test123", url="https://checkout.stripe.com/xxx")
 
         session = StripeCheckoutService.create_subscription_checkout(
@@ -52,8 +52,8 @@ class TestCreateSubscriptionCheckout:
         assert session.id == "cs_test123"
         mock_create.assert_called_once()
 
-        # DB に CheckoutSession が作られたか
-        checkout = CheckoutSession.objects.get(stripe_session_id="cs_test123")
+        # DB に CheckoutSessionStatus が作られたか
+        checkout = CheckoutSessionStatus.objects.get(stripe_session_id="cs_test123")
         assert checkout.type == "subscription"
         assert checkout.status == "pending"
         assert checkout.stripe_customer == stripe_customer
@@ -70,7 +70,7 @@ class TestCreateCreditCheckout:
         stripe_customer: StripeCustomer,
         credit_plan: CreditPlan,
     ) -> None:
-        """Stripe Session を作成し、CheckoutSession を DB に保存."""
+        """Stripe Session を作成し、CheckoutSessionStatus を DB に保存."""
         mock_create.return_value = MagicMock(id="cs_credit123", url="https://checkout.stripe.com/xxx")
 
         session = StripeCheckoutService.create_credit_checkout(
@@ -80,7 +80,7 @@ class TestCreateCreditCheckout:
         assert session.id == "cs_credit123"
         mock_create.assert_called_once()
 
-        checkout = CheckoutSession.objects.get(stripe_session_id="cs_credit123")
+        checkout = CheckoutSessionStatus.objects.get(stripe_session_id="cs_credit123")
         assert checkout.type == "credit"
         assert checkout.status == "pending"
 
@@ -95,7 +95,7 @@ class TestCreateCustomCheckout:
         mock_create: MagicMock,
         stripe_customer: StripeCustomer,
     ) -> None:
-        """動的金額で Stripe Session を作成し、CheckoutSession を DB に保存."""
+        """動的金額で Stripe Session を作成し、CheckoutSessionStatus を DB に保存."""
         mock_create.return_value = MagicMock(id="cs_custom123", url="https://checkout.stripe.com/xxx")
 
         session = StripeCheckoutService.create_custom_checkout(
@@ -110,6 +110,6 @@ class TestCreateCustomCheckout:
         assert line_item["price_data"]["unit_amount"] == 5000
         assert line_item["price_data"]["product_data"]["name"] == "コンサル費用"
 
-        checkout = CheckoutSession.objects.get(stripe_session_id="cs_custom123")
+        checkout = CheckoutSessionStatus.objects.get(stripe_session_id="cs_custom123")
         assert checkout.type == "custom"
         assert checkout.status == "pending"

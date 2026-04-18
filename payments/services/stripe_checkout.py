@@ -4,7 +4,7 @@ import stripe
 from django.conf import settings
 
 from ..models import (
-    CheckoutSession,
+    CheckoutSessionStatus,
     Company,
     CreditPlan,
     StripeCustomer,
@@ -45,7 +45,7 @@ class StripeCheckoutService:
             success_url=f"{base_url}checkout/success/?session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{base_url}checkout/cancel/",
         )
-        CheckoutSession.objects.create(
+        CheckoutSessionStatus.objects.create(
             stripe_customer=stripe_customer,
             stripe_session_id=session.id,
             type="subscription",
@@ -67,7 +67,7 @@ class StripeCheckoutService:
             success_url=f"{base_url}checkout/success/?session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{base_url}checkout/cancel/",
         )
-        CheckoutSession.objects.create(
+        CheckoutSessionStatus.objects.create(
             stripe_customer=stripe_customer,
             stripe_session_id=session.id,
             type="credit",
@@ -97,7 +97,7 @@ class StripeCheckoutService:
             success_url=f"{base_url}checkout/success/?session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{base_url}checkout/cancel/",
         )
-        CheckoutSession.objects.create(
+        CheckoutSessionStatus.objects.create(
             stripe_customer=stripe_customer,
             stripe_session_id=session.id,
             type="custom",

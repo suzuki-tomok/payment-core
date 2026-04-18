@@ -5,13 +5,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from payments.models import (
-    CheckoutSession,
-    CreditHistory,
+    CheckoutSessionStatus,
     CreditPlan,
-    InvoiceHistory,
+    CreditStatus,
+    InvoiceStatus,
     StripeCustomer,
-    SubscriptionHistory,
     SubscriptionPlan,
+    SubscriptionStatus,
 )
 from payments.services import StripeWebhookService
 
@@ -23,8 +23,8 @@ class TestHandleCheckoutCompleted:
     """handle_checkout_completed のテスト."""
 
     def test_subscription_type(self, stripe_customer: StripeCustomer) -> None:
-        """type=subscription なら CheckoutSession を completed にするだけ."""
-        checkout = CheckoutSession.objects.create(
+        """type=subscription なら CheckoutSessionStatus を completed にするだけ."""
+        checkout = CheckoutSessionStatus.objects.create(
             stripe_customer=stripe_customer,
             stripe_session_id="cs_sub123",
             type="subscription",
@@ -42,8 +42,8 @@ class TestHandleCheckoutCompleted:
         stripe_customer: StripeCustomer,
         credit_plan: CreditPlan,
     ) -> None:
-        """type=credit なら CheckoutSession completed + CreditHistory INSERT."""
-        CheckoutSession.objects.create(
+        """type=credit なら CheckoutSessionStatus completed + CreditStatus INSERT."""
+        CheckoutSessionStatus.objects.create(
             stripe_customer=stripe_customer,
             stripe_session_id="cs_credit123",
             type="credit",
@@ -52,9 +52,9 @@ class TestHandleCheckoutCompleted:
 
         StripeWebhookService.handle_checkout_completed({"id": "cs_credit123"})
 
-        credit_history = CreditHistory.objects.get(stripe_payment_id="pi_credit123")
-        assert credit_history.credit_plan == credit_plan
-        assert credit_history.status == "completed"
+        credit_status = CreditStatus.objects.get(stripe_payment_id="pi_credit123")
+        assert credit_status.credit_plan == credit_plan
+        assert credit_status.status == "completed"
 
     @patch("payments.services.stripe_webhook.stripe.checkout.Session.retrieve")
     def test_custom_type(
@@ -62,8 +62,8 @@ class TestHandleCheckoutCompleted:
         mock_retrieve: MagicMock,
         stripe_customer: StripeCustomer,
     ) -> None:
-        """type=custom なら CheckoutSession completed + InvoiceHistory INSERT."""
-        CheckoutSession.objects.create(
+        """type=custom なら CheckoutSessionStatus completed + InvoiceStatus INSERT."""
+        CheckoutSessionStatus.objects.create(
             stripe_customer=stripe_customer,
             stripe_session_id="cs_custom123",
             type="custom",
@@ -72,7 +72,7 @@ class TestHandleCheckoutCompleted:
 
         StripeWebhookService.handle_checkout_completed({"id": "cs_custom123"})
 
-        invoice = InvoiceHistory.objects.get(stripe_payment_id="pi_custom123")
+        invoice = InvoiceStatus.objects.get(stripe_payment_id="pi_custom123")
         assert invoice.description == "コンサル費用"
         assert invoice.amount == 5000
         assert invoice.status == "completed"
@@ -93,7 +93,7 @@ class TestHandleSubscriptionCreated:
         stripe_customer: StripeCustomer,
         subscription_plan: SubscriptionPlan,
     ) -> None:
-        """SubscriptionHistory を INSERT."""
+        """SubscriptionStatus を INSERT."""
         mock_retrieve.return_value = mock_subscription(
             subscription_plan.stripe_price_id, 1743465600, 1746144000,
         )
@@ -103,7 +103,7 @@ class TestHandleSubscriptionCreated:
             "id": "sub_new123",
         })
 
-        history = SubscriptionHistory.objects.get(stripe_subscription_id="sub_new123")
+        history = SubscriptionStatus.objects.get(stripe_subscription_id="sub_new123")
         assert history.status == "created"
         assert history.subscription_plan == subscription_plan
 
@@ -116,43 +116,43 @@ class TestHandleSubscriptionUpdated:
     def test_updates_history(
         self,
         mock_retrieve: MagicMock,
-        subscription_history: SubscriptionHistory,
+        subscription_status: SubscriptionStatus,
     ) -> None:
-        """SubscriptionHistory を UPDATE."""
+        """SubscriptionStatus を UPDATE."""
         mock_retrieve.return_value = mock_subscription("price_test_standard", 1746144000, 1748736000)
 
         StripeWebhookService.handle_subscription_updated({"id": "sub_test123"})
 
-        subscription_history.refresh_from_db()
-        assert subscription_history.status == "updated"
+        subscription_status.refresh_from_db()
+        assert subscription_status.status == "updated"
 
 
 @pytest.mark.django_db
 class TestHandleSubscriptionDeleted:
     """handle_subscription_deleted のテスト."""
 
-    def test_deletes_history(self, subscription_history: SubscriptionHistory) -> None:
-        """SubscriptionHistory.status を deleted に UPDATE."""
+    def test_deletes_history(self, subscription_status: SubscriptionStatus) -> None:
+        """SubscriptionStatus.status を deleted に UPDATE."""
         StripeWebhookService.handle_subscription_deleted({"id": "sub_test123"})
 
-        subscription_history.refresh_from_db()
-        assert subscription_history.status == "deleted"
+        subscription_status.refresh_from_db()
+        assert subscription_status.status == "deleted"
 
 
 @pytest.mark.django_db
 class TestHandleChargeRefunded:
     """handle_charge_refunded のテスト."""
 
-    def test_refund_credit(self, credit_history: CreditHistory) -> None:
-        """CreditHistory.status を refunded に UPDATE."""
+    def test_refund_credit(self, credit_status: CreditStatus) -> None:
+        """CreditStatus.status を refunded に UPDATE."""
         StripeWebhookService.handle_charge_refunded({"payment_intent": "pi_test123"})
 
-        credit_history.refresh_from_db()
-        assert credit_history.status == "refunded"
+        credit_status.refresh_from_db()
+        assert credit_status.status == "refunded"
 
     def test_refund_invoice(self, stripe_customer: StripeCustomer) -> None:
-        """InvoiceHistory.status を refunded に UPDATE."""
-        invoice = InvoiceHistory.objects.create(
+        """InvoiceStatus.status を refunded に UPDATE."""
+        invoice = InvoiceStatus.objects.create(
             stripe_customer=stripe_customer,
             description="テスト",
             amount=5000,

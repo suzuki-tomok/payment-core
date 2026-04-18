@@ -1,7 +1,7 @@
 from ..models import (
     CreditPlan,
-    SubscriptionHistory,
     SubscriptionPlan,
+    SubscriptionStatus,
     User,
 )
 
@@ -22,7 +22,7 @@ class StripeCheckoutValidator:
             return "指定されたプランが見つかりません。"
 
         # 二重契約防止
-        has_active = SubscriptionHistory.objects.filter(
+        has_active = SubscriptionStatus.objects.filter(
             stripe_customer__company=user.company,
             status__in=["created", "updated"],
         ).exists()

@@ -6,11 +6,11 @@ import pytest
 
 from payments.models import (
     Company,
-    CreditHistory,
     CreditPlan,
+    CreditStatus,
     StripeCustomer,
-    SubscriptionHistory,
     SubscriptionPlan,
+    SubscriptionStatus,
     User,
 )
 
@@ -45,12 +45,12 @@ def subscription_plan() -> SubscriptionPlan:
 
 
 @pytest.fixture
-def subscription_history(
+def subscription_status(
     stripe_customer: StripeCustomer,
     subscription_plan: SubscriptionPlan,
-) -> SubscriptionHistory:
-    """テスト用 SubscriptionHistory (status=created)."""
-    return SubscriptionHistory.objects.create(
+) -> SubscriptionStatus:
+    """テスト用 SubscriptionStatus (status=created)."""
+    return SubscriptionStatus.objects.create(
         stripe_customer=stripe_customer,
         subscription_plan=subscription_plan,
         stripe_subscription_id="sub_test123",
@@ -72,12 +72,12 @@ def credit_plan() -> CreditPlan:
 
 
 @pytest.fixture
-def credit_history(
+def credit_status(
     stripe_customer: StripeCustomer,
     credit_plan: CreditPlan,
-) -> CreditHistory:
-    """テスト用 CreditHistory (status=completed)."""
-    return CreditHistory.objects.create(
+) -> CreditStatus:
+    """テスト用 CreditStatus (status=completed)."""
+    return CreditStatus.objects.create(
         stripe_customer=stripe_customer,
         credit_plan=credit_plan,
         stripe_payment_id="pi_test123",

@@ -2,7 +2,7 @@
 
 import pytest
 
-from payments.models import Company, CompanyUsageHistory, CreditHistory, CreditPlan, StripeCustomer, User
+from payments.models import Company, CompanyUsageHistory, CreditPlan, CreditStatus, StripeCustomer, User
 from payments.services.remaining_credit import RemainingCreditService
 
 
@@ -18,7 +18,7 @@ class TestGetRemaining:
         assert result.ai_chat_remaining == 0
 
     def test_credit_no_usage(
-        self, company: Company, credit_history: CreditHistory,
+        self, company: Company, credit_status: CreditStatus,
     ) -> None:
         """クレジット購入あり、使用量 0 なら remaining = 購入合計."""
         result = RemainingCreditService.get_remaining(company)
@@ -27,7 +27,7 @@ class TestGetRemaining:
         assert result.ai_chat_remaining == 10
 
     def test_credit_with_usage(
-        self, company: Company, user: User, credit_history: CreditHistory,
+        self, company: Company, user: User, credit_status: CreditStatus,
     ) -> None:
         """クレジット購入あり、一部使用済みなら remaining = 購入合計 - used."""
         for _ in range(3):
@@ -47,11 +47,11 @@ class TestGetRemaining:
         self, company: Company, user: User, stripe_customer: StripeCustomer, credit_plan: CreditPlan,
     ) -> None:
         """複数回購入した場合、合計から使用量を引く."""
-        CreditHistory.objects.create(
+        CreditStatus.objects.create(
             stripe_customer=stripe_customer, credit_plan=credit_plan,
             stripe_payment_id="pi_1", status="completed",
         )
-        CreditHistory.objects.create(
+        CreditStatus.objects.create(
             stripe_customer=stripe_customer, credit_plan=credit_plan,
             stripe_payment_id="pi_2", status="completed",
         )
@@ -72,11 +72,11 @@ class TestGetRemaining:
         self, company: Company, stripe_customer: StripeCustomer, credit_plan: CreditPlan,
     ) -> None:
         """refunded のクレジットは残量に含まない."""
-        CreditHistory.objects.create(
+        CreditStatus.objects.create(
             stripe_customer=stripe_customer, credit_plan=credit_plan,
             stripe_payment_id="pi_1", status="completed",
         )
-        CreditHistory.objects.create(
+        CreditStatus.objects.create(
             stripe_customer=stripe_customer, credit_plan=credit_plan,
             stripe_payment_id="pi_2", status="refunded",
         )
@@ -87,7 +87,7 @@ class TestGetRemaining:
         assert result.ai_chat_remaining == 10
 
     def test_subscription_usage_not_counted(
-        self, company: Company, user: User, credit_history: CreditHistory,
+        self, company: Company, user: User, credit_status: CreditStatus,
     ) -> None:
         """source=subscription の使用量はクレジット残量に影響しない."""
         CompanyUsageHistory.objects.create(

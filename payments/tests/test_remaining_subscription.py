@@ -2,7 +2,7 @@
 
 import pytest
 
-from payments.models import Company, CompanyUsageHistory, SubscriptionHistory, User
+from payments.models import Company, CompanyUsageHistory, SubscriptionStatus, User
 from payments.services.remaining_subscription import RemainingSubscriptionService
 
 
@@ -21,7 +21,7 @@ class TestGetRemaining:
         assert result.ai_chat_remaining == 0
 
     def test_active_no_usage(
-        self, company: Company, subscription_history: SubscriptionHistory,
+        self, company: Company, subscription_status: SubscriptionStatus,
     ) -> None:
         """サブスク契約中、使用量 0 なら limit = remaining."""
         result = RemainingSubscriptionService.get_remaining(company)
@@ -33,7 +33,7 @@ class TestGetRemaining:
         assert result.ai_chat_remaining == 50
 
     def test_active_with_usage(
-        self, company: Company, user: User, subscription_history: SubscriptionHistory,
+        self, company: Company, user: User, subscription_status: SubscriptionStatus,
     ) -> None:
         """サブスク契約中、一部使用済みなら remaining = limit - used."""
         for _ in range(3):
@@ -51,11 +51,11 @@ class TestGetRemaining:
         assert result.ai_chat_remaining == 48
 
     def test_updated_status(
-        self, company: Company, subscription_history: SubscriptionHistory,
+        self, company: Company, subscription_status: SubscriptionStatus,
     ) -> None:
         """updated ステータスでも有効として扱う."""
-        subscription_history.status = "updated"
-        subscription_history.save()
+        subscription_status.status = "updated"
+        subscription_status.save()
 
         result = RemainingSubscriptionService.get_remaining(company)
 
@@ -63,11 +63,11 @@ class TestGetRemaining:
         assert result.document_remaining == 100
 
     def test_deleted_status(
-        self, company: Company, subscription_history: SubscriptionHistory,
+        self, company: Company, subscription_status: SubscriptionStatus,
     ) -> None:
         """deleted ステータスなら全部 0."""
-        subscription_history.status = "deleted"
-        subscription_history.save()
+        subscription_status.status = "deleted"
+        subscription_status.save()
 
         result = RemainingSubscriptionService.get_remaining(company)
 
@@ -75,7 +75,7 @@ class TestGetRemaining:
         assert result.document_remaining == 0
 
     def test_credit_usage_not_counted(
-        self, company: Company, user: User, subscription_history: SubscriptionHistory,
+        self, company: Company, user: User, subscription_status: SubscriptionStatus,
     ) -> None:
         """source=credit の使用量はサブスク残量に影響しない."""
         CompanyUsageHistory.objects.create(

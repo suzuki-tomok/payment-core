@@ -1,15 +1,16 @@
 from import_export import resources
 
 from .models import (
-    CheckoutSession,
+    CheckoutSessionStatus,
     Company,
     CompanyUsageHistory,
-    CreditHistory,
     CreditPlan,
-    InvoiceHistory,
+    CreditStatus,
+    InvoiceStatus,
     StripeCustomer,
-    SubscriptionHistory,
     SubscriptionPlan,
+    SubscriptionStatus,
+    WebhookEventLog,
 )
 
 
@@ -28,9 +29,9 @@ class SubscriptionPlanResource(resources.ModelResource):
         model = SubscriptionPlan
 
 
-class SubscriptionHistoryResource(resources.ModelResource):
+class SubscriptionStatusResource(resources.ModelResource):
     class Meta:
-        model = SubscriptionHistory
+        model = SubscriptionStatus
 
 
 class CreditPlanResource(resources.ModelResource):
@@ -38,9 +39,9 @@ class CreditPlanResource(resources.ModelResource):
         model = CreditPlan
 
 
-class CreditHistoryResource(resources.ModelResource):
+class CreditStatusResource(resources.ModelResource):
     class Meta:
-        model = CreditHistory
+        model = CreditStatus
 
 
 class CompanyUsageHistoryResource(resources.ModelResource):
@@ -48,11 +49,16 @@ class CompanyUsageHistoryResource(resources.ModelResource):
         model = CompanyUsageHistory
 
 
-class InvoiceHistoryResource(resources.ModelResource):
+class InvoiceStatusResource(resources.ModelResource):
     class Meta:
-        model = InvoiceHistory
+        model = InvoiceStatus
 
 
-class CheckoutSessionResource(resources.ModelResource):
+class CheckoutSessionStatusResource(resources.ModelResource):
     class Meta:
-        model = CheckoutSession
+        model = CheckoutSessionStatus
+
+
+class WebhookEventLogResource(resources.ModelResource):
+    class Meta:
+        model = WebhookEventLog

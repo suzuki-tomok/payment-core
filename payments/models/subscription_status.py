@@ -4,17 +4,17 @@ from .stripe_customer import StripeCustomer
 from .subscription_plan import SubscriptionPlan
 
 
-class SubscriptionHistory(models.Model):
+class SubscriptionStatus(models.Model):
     class Status(models.TextChoices):
         CREATED = "created", "Created"
         UPDATED = "updated", "Updated"
         DELETED = "deleted", "Deleted"
 
     stripe_customer = models.ForeignKey(
-        StripeCustomer, on_delete=models.CASCADE, related_name="subscription_histories"
+        StripeCustomer, on_delete=models.CASCADE, related_name="subscription_statuses"
     )
     subscription_plan = models.ForeignKey(
-        SubscriptionPlan, on_delete=models.PROTECT, related_name="subscription_histories"
+        SubscriptionPlan, on_delete=models.PROTECT, related_name="subscription_statuses"
     )
     stripe_subscription_id = models.CharField(max_length=255, unique=True)
     status = models.CharField(max_length=20, choices=Status.choices)
@@ -22,6 +22,9 @@ class SubscriptionHistory(models.Model):
     current_period_end = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "subscription statuses"
 
     def __str__(self) -> str:
         return f"{self.stripe_customer} - {self.subscription_plan.name} ({self.status})"

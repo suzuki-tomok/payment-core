@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from ..models import (
     Company,
     CompanyUsageHistory,
-    CreditHistory,
+    CreditStatus,
 )
 
 
@@ -23,7 +23,7 @@ class RemainingCreditService:
         """クレジットの残量を取得."""
 
         # 有効な（status=completed）購入履歴から合計クレジット数を算出
-        credit_histories = CreditHistory.objects.filter(
+        credit_histories = CreditStatus.objects.filter(
             stripe_customer__company=company,
             status="completed",
         ).select_related("credit_plan")

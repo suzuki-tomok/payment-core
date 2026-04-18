@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from ..models import (
     Company,
     CompanyUsageHistory,
-    SubscriptionHistory,
+    SubscriptionStatus,
 )
 
 
@@ -27,7 +27,7 @@ class RemainingSubscriptionService:
 
         # 有効な（active/trialing）サブスクリプションを取得
         subscription = (
-            SubscriptionHistory.objects.filter(
+            SubscriptionStatus.objects.filter(
                 stripe_customer__company=company,
                 status__in=["created", "updated"],
             )

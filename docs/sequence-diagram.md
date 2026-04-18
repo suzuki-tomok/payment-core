@@ -22,7 +22,7 @@ sequenceDiagram
 
     D->>S: checkout.Session.create(customer=cus_xxx, mode="subscription", price=stripe_price_id)
     S-->>D: session_id, url
-    D->>DB: CheckoutSession INSERT (type=subscription, status=pending)
+    D->>DB: CheckoutSessionStatus INSERT (type=subscription, status=pending)
     D-->>U: Stripe Checkout 画面へリダイレクト
 
     U->>S: カード入力・決済
@@ -33,12 +33,12 @@ sequenceDiagram
         D-->>U: 処理中画面（スピナー表示）
 
         S->>D: Webhook: checkout.session.completed
-        D->>DB: CheckoutSession.status = completed
+        D->>DB: CheckoutSessionStatus.status = completed
         D-->>S: 200 OK
 
         loop ポーリング（2秒間隔・最大60秒）
             U->>D: GET /api/checkout-status/?session_id=xxx
-            D->>DB: CheckoutSession.status 確認
+            D->>DB: CheckoutSessionStatus.status 確認
             alt status = completed
                 D-->>U: {"status": "completed"}
                 U->>U: 完了画面表示
@@ -59,7 +59,7 @@ sequenceDiagram
         S->>D: Webhook: customer.subscription.created
         D->>S: Subscription.retrieve(sub_xxx)
         S-->>D: items.data[0] {price_id, current_period_start, current_period_end}
-        D->>DB: SubscriptionHistory INSERT (status=created)
+        D->>DB: SubscriptionStatus INSERT (status=created)
         D-->>S: 200 OK
     end
 
@@ -67,13 +67,13 @@ sequenceDiagram
         S->>D: Webhook: customer.subscription.updated
         D->>S: Subscription.retrieve(sub_xxx)
         S-->>D: items.data[0] {price_id, current_period_start, current_period_end}
-        D->>DB: SubscriptionHistory UPDATE (status=updated, period)
+        D->>DB: SubscriptionStatus UPDATE (status=updated, period)
         D-->>S: 200 OK
     end
 
     opt 解約時
         S->>D: Webhook: customer.subscription.deleted
-        D->>DB: SubscriptionHistory UPDATE (status=deleted)
+        D->>DB: SubscriptionStatus UPDATE (status=deleted)
         D-->>S: 200 OK
     end
 ```
@@ -100,7 +100,7 @@ sequenceDiagram
 
     D->>S: checkout.Session.create(customer=cus_xxx, mode="payment", price=stripe_price_id)
     S-->>D: session_id, url
-    D->>DB: CheckoutSession INSERT (type=credit, status=pending)
+    D->>DB: CheckoutSessionStatus INSERT (type=credit, status=pending)
     D-->>U: Stripe Checkout 画面へリダイレクト
 
     U->>S: カード入力・決済
@@ -111,15 +111,15 @@ sequenceDiagram
         D-->>U: 処理中画面（スピナー表示）
 
         S->>D: Webhook: checkout.session.completed
-        D->>DB: CheckoutSession.status = completed
+        D->>DB: CheckoutSessionStatus.status = completed
         D->>S: Session.retrieve(cs_xxx, expand=["line_items"])
         S-->>D: payment_intent, line_items.data[0].price.id
-        D->>DB: CreditHistory INSERT (status=completed)
+        D->>DB: CreditStatus INSERT (status=completed)
         D-->>S: 200 OK
 
         loop ポーリング（2秒間隔・最大60秒）
             U->>D: GET /api/checkout-status/?session_id=xxx
-            D->>DB: CheckoutSession.status 確認
+            D->>DB: CheckoutSessionStatus.status 確認
             alt status = completed
                 D-->>U: {"status": "completed"}
                 U->>U: 完了画面表示
@@ -138,7 +138,7 @@ sequenceDiagram
 
     opt 返金時
         S->>D: Webhook: charge.refunded
-        D->>DB: CreditHistory UPDATE (status=refunded)
+        D->>DB: CreditStatus UPDATE (status=refunded)
         D-->>S: 200 OK
     end
 ```
@@ -165,7 +165,7 @@ sequenceDiagram
 
     D->>S: checkout.Session.create(customer=cus_xxx, mode="payment", price_data={amount, description})
     S-->>D: session_id, url
-    D->>DB: CheckoutSession INSERT (type=custom, status=pending)
+    D->>DB: CheckoutSessionStatus INSERT (type=custom, status=pending)
     D-->>U: Stripe Checkout 画面へリダイレクト
 
     U->>S: カード入力・決済
@@ -176,15 +176,15 @@ sequenceDiagram
         D-->>U: 処理中画面（スピナー表示）
 
         S->>D: Webhook: checkout.session.completed
-        D->>DB: CheckoutSession.status = completed
+        D->>DB: CheckoutSessionStatus.status = completed
         D->>S: Session.retrieve(cs_xxx, expand=["line_items"])
         S-->>D: payment_intent, line_items.data[0].price_data
-        D->>DB: InvoiceHistory INSERT (description, amount, status=completed)
+        D->>DB: InvoiceStatus INSERT (description, amount, status=completed)
         D-->>S: 200 OK
 
         loop ポーリング（2秒間隔・最大60秒）
             U->>D: GET /api/checkout-status/?session_id=xxx
-            D->>DB: CheckoutSession.status 確認
+            D->>DB: CheckoutSessionStatus.status 確認
             alt status = completed
                 D-->>U: {"status": "completed"}
                 U->>U: 完了画面表示
@@ -203,7 +203,7 @@ sequenceDiagram
 
     opt 返金時
         S->>D: Webhook: charge.refunded
-        D->>DB: InvoiceHistory UPDATE (status=refunded)
+        D->>DB: InvoiceStatus UPDATE (status=refunded)
         D-->>S: 200 OK
     end
 ```
@@ -220,7 +220,7 @@ sequenceDiagram
 
     Note over D,DB: サブスク残量計算
 
-    D->>DB: SubscriptionHistory (status=created/updated) を取得
+    D->>DB: SubscriptionStatus (status=created/updated) を取得
     alt 有効なサブスクあり
         D->>DB: CompanyUsageHistory COUNT (source=subscription, type=document, サブスク期間内)
         D->>D: ドキュメント残 = monthly_document_limit - 使用数
@@ -232,7 +232,7 @@ sequenceDiagram
 
     Note over D,DB: クレジット残量計算
 
-    D->>DB: CreditHistory (status=completed) → CreditPlan のドキュメント/AIチャット合計
+    D->>DB: CreditStatus (status=completed) → CreditPlan のドキュメント/AIチャット合計
     D->>DB: CompanyUsageHistory COUNT (source=credit, type=document)
     D->>D: ドキュメント残 = 購入合計 - 消費数
     D->>DB: CompanyUsageHistory COUNT (source=credit, type=ai_chat)

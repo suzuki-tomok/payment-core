@@ -6,12 +6,12 @@ erDiagram
     Company ||--o| StripeCustomer : "1:1"
     Company ||--o{ CompanyUsageHistory : "1:N"
     User ||--o{ CompanyUsageHistory : "1:N"
-    StripeCustomer ||--o{ CheckoutSession : "1:N"
-    StripeCustomer ||--o{ SubscriptionHistory : "1:N"
-    SubscriptionHistory }o--|| SubscriptionPlan : "N:1"
-    StripeCustomer ||--o{ CreditHistory : "1:N"
-    CreditHistory }o--|| CreditPlan : "N:1"
-    StripeCustomer ||--o{ InvoiceHistory : "1:N"
+    StripeCustomer ||--o{ CheckoutSessionStatus : "1:N"
+    StripeCustomer ||--o{ SubscriptionStatus : "1:N"
+    SubscriptionStatus }o--|| SubscriptionPlan : "N:1"
+    StripeCustomer ||--o{ CreditStatus : "1:N"
+    CreditStatus }o--|| CreditPlan : "N:1"
+    StripeCustomer ||--o{ InvoiceStatus : "1:N"
 
     User {
         int id PK
@@ -47,7 +47,7 @@ erDiagram
         datetime updated_at
     }
 
-    CheckoutSession {
+    CheckoutSessionStatus {
         int id PK
         int stripe_customer_id FK
         string stripe_session_id
@@ -57,7 +57,7 @@ erDiagram
         datetime updated_at
     }
 
-    SubscriptionHistory {
+    SubscriptionStatus {
         int id PK
         int stripe_customer_id FK
         int subscription_plan_id FK
@@ -79,7 +79,7 @@ erDiagram
         datetime updated_at
     }
 
-    CreditHistory {
+    CreditStatus {
         int id PK
         int stripe_customer_id FK
         int credit_plan_id FK
@@ -99,7 +99,7 @@ erDiagram
         datetime updated_at
     }
 
-    InvoiceHistory {
+    InvoiceStatus {
         int id PK
         int stripe_customer_id FK
         string description
@@ -108,6 +108,14 @@ erDiagram
         string status
         datetime created_at
         datetime updated_at
+    }
+
+    WebhookEventLog {
+        int id PK
+        string event_id
+        string event_type
+        string stripe_customer_id
+        datetime created_at
     }
 ```
 
@@ -118,10 +126,11 @@ erDiagram
 | User | ユーザー（Django AbstractUser拡張、Companyに所属） | - |
 | Company | 会社情報 | - |
 | StripeCustomer | Stripe顧客紐付け | - |
-| CompanyUsageHistory | 使用履歴（type: document/ai_chat、source: subscription/credit） | - |
-| CheckoutSession | 決済セッション追跡（ポーリング用） | pending → completed |
-| SubscriptionHistory | サブスク契約（1 subscription_id = 1レコード、UPDATE） | created → updated → deleted |
+| CompanyUsageHistory | 使用履歴（type: document/ai_chat、source: subscription/credit） | INSERT only |
+| CheckoutSessionStatus | 決済セッション状態追跡（ポーリング用） | pending → completed |
+| SubscriptionStatus | サブスク契約状態（1 subscription_id = 1レコード、UPDATE） | created → updated → deleted |
 | SubscriptionPlan | 月額プラン定義（静的マスタ） | - |
-| CreditHistory | クレジット購入（1 payment_id = 1レコード、UPDATE） | completed → refunded |
+| CreditStatus | クレジット購入状態（1 payment_id = 1レコード、UPDATE） | completed → refunded |
 | CreditPlan | クレジットパック定義（静的マスタ） | - |
-| InvoiceHistory | カスタム支払い（1 payment_id = 1レコード、UPDATE） | completed → refunded |
+| InvoiceStatus | カスタム支払い状態（1 payment_id = 1レコード、UPDATE） | completed → refunded |
+| WebhookEventLog | Webhookイベントログ（冪等性管理） | INSERT only |

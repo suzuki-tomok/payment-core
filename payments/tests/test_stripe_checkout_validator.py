@@ -2,7 +2,7 @@
 
 import pytest
 
-from payments.models import CreditPlan, SubscriptionHistory, SubscriptionPlan, User
+from payments.models import CreditPlan, SubscriptionPlan, SubscriptionStatus, User
 from payments.services import StripeCheckoutValidator
 
 
@@ -19,18 +19,18 @@ class TestValidateSubscription:
         assert StripeCheckoutValidator.validate_subscription(user, "99999") == "指定されたプランが見つかりません。"
 
     def test_already_subscribed(
-        self, user: User, subscription_plan: SubscriptionPlan, subscription_history: SubscriptionHistory,
+        self, user: User, subscription_plan: SubscriptionPlan, subscription_status: SubscriptionStatus,
     ) -> None:
         """既にサブスク契約中ならエラー."""
         result = StripeCheckoutValidator.validate_subscription(user, str(subscription_plan.id))
         assert result == "既にサブスクリプションを契約中です。"
 
     def test_deleted_subscription_allows_new(
-        self, user: User, subscription_plan: SubscriptionPlan, subscription_history: SubscriptionHistory,
+        self, user: User, subscription_plan: SubscriptionPlan, subscription_status: SubscriptionStatus,
     ) -> None:
         """解約済み（deleted）なら新規契約できる."""
-        subscription_history.status = "deleted"
-        subscription_history.save()
+        subscription_status.status = "deleted"
+        subscription_status.save()
         assert StripeCheckoutValidator.validate_subscription(user, str(subscription_plan.id)) is None
 
     def test_valid(self, user: User, subscription_plan: SubscriptionPlan) -> None:
