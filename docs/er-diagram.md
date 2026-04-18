@@ -127,7 +127,7 @@ erDiagram
 | Company | 会社情報 | - |
 | StripeCustomer | Stripe顧客紐付け | - |
 | CompanyUsageHistory | 使用履歴（type: document/ai_chat、source: subscription/credit） | INSERT only |
-| CheckoutSessionStatus | 決済セッション状態追跡（ポーリング用） | pending → completed |
+| CheckoutSessionStatus | 決済セッション状態追跡（ポーリング用） | pending → completed / canceled / expired |
 | SubscriptionStatus | サブスク契約状態（1 subscription_id = 1レコード、UPDATE） | created → updated → deleted |
 | SubscriptionPlan | 月額プラン定義（静的マスタ） | - |
 | CreditStatus | クレジット購入状態（1 payment_id = 1レコード、UPDATE） | completed → refunded |
