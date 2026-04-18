@@ -121,7 +121,7 @@ class TestHandleSubscriptionUpdated:
         """SubscriptionStatus を UPDATE."""
         mock_retrieve.return_value = mock_subscription("price_test_standard", 1746144000, 1748736000)
 
-        StripeWebhookService.handle_subscription_updated({"id": "sub_test123"})
+        StripeWebhookService.handle_subscription_updated({"id": "sub_test123", "customer": "cus_test123"})
 
         subscription_status.refresh_from_db()
         assert subscription_status.status == "updated"
@@ -133,7 +133,7 @@ class TestHandleSubscriptionDeleted:
 
     def test_deletes_history(self, subscription_status: SubscriptionStatus) -> None:
         """SubscriptionStatus.status を deleted に UPDATE."""
-        StripeWebhookService.handle_subscription_deleted({"id": "sub_test123"})
+        StripeWebhookService.handle_subscription_deleted({"id": "sub_test123", "customer": "cus_test123"})
 
         subscription_status.refresh_from_db()
         assert subscription_status.status == "deleted"
@@ -145,7 +145,7 @@ class TestHandleChargeRefunded:
 
     def test_refund_credit(self, credit_status: CreditStatus) -> None:
         """CreditStatus.status を refunded に UPDATE."""
-        StripeWebhookService.handle_charge_refunded({"payment_intent": "pi_test123"})
+        StripeWebhookService.handle_charge_refunded({"payment_intent": "pi_test123", "customer": "cus_test123"})
 
         credit_status.refresh_from_db()
         assert credit_status.status == "refunded"
@@ -160,11 +160,11 @@ class TestHandleChargeRefunded:
             status="completed",
         )
 
-        StripeWebhookService.handle_charge_refunded({"payment_intent": "pi_invoice123"})
+        StripeWebhookService.handle_charge_refunded({"payment_intent": "pi_invoice123", "customer": "cus_test123"})
 
         invoice.refresh_from_db()
         assert invoice.status == "refunded"
 
     def test_refund_not_found(self) -> None:
         """該当する History がなくても例外が発生しない."""
-        StripeWebhookService.handle_charge_refunded({"payment_intent": "pi_nonexistent"})
+        StripeWebhookService.handle_charge_refunded({"payment_intent": "pi_nonexistent", "customer": "cus_test123"})

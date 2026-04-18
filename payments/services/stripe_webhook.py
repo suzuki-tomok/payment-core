@@ -48,7 +48,8 @@ class StripeWebhookService:
         with transaction.atomic():
             checkout.status = "completed"
             checkout.save()
-            logger.info("CheckoutSessionStatus completed: session_id=%s, type=%s", session_id, checkout.type)
+            cid = checkout.stripe_customer.stripe_customer_id
+            logger.info("Checkout completed: sid=%s type=%s cus=%s", session_id, checkout.type, cid)
 
             if checkout.type == "credit":
                 StripeWebhookService._create_credit_history(checkout)  # noqa: SLF001
@@ -75,7 +76,8 @@ class StripeWebhookService:
             stripe_customer=checkout.stripe_customer,
             credit_plan=credit_plan,
         )
-        logger.info("CreditStatus created: payment_id=%s", payment_intent_id)
+        cid = checkout.stripe_customer.stripe_customer_id
+        logger.info("CreditStatus created: pid=%s cus=%s", payment_intent_id, cid)
 
     @staticmethod
     def _create_invoice_history(checkout: CheckoutSessionStatus) -> None:
@@ -94,7 +96,8 @@ class StripeWebhookService:
             description=description,
             amount=amount,
         )
-        logger.info("InvoiceStatus created: payment_id=%s", payment_intent_id)
+        cid = checkout.stripe_customer.stripe_customer_id
+        logger.info("InvoiceStatus created: pid=%s cus=%s", payment_intent_id, cid)
 
     # ========================================
     # subscription 系
@@ -128,27 +131,41 @@ class StripeWebhookService:
             current_period_start=period_start,
             current_period_end=period_end,
         )
-        logger.info("SubscriptionStatus created: subscription_id=%s", stripe_subscription_id)
+        logger.info("SubStatus created: sub=%s cus=%s", stripe_subscription_id, stripe_customer_id)
 
     @staticmethod
     def handle_subscription_updated(data: object) -> None:
-        """サブスク更新時: SubscriptionStatus を UPDATE."""
+        """サブスク更新時: SubscriptionStatus を UPDATE.
+
+        プラン変更・月次更新の両方に対応。
+        price_id から SubscriptionPlan を特定し、プランも更新する。
+        """
         stripe_subscription_id = data["id"]  # type: ignore[index]
 
         sub = stripe.Subscription.retrieve(stripe_subscription_id)
         item = sub["items"]["data"][0]
+        price_id = item["price"]["id"]
 
         period_start = datetime.fromtimestamp(item["current_period_start"], tz=UTC)
         period_end = datetime.fromtimestamp(item["current_period_end"], tz=UTC)
 
+        # プラン変更に対応: price_id から SubscriptionPlan を取得
+        try:
+            plan = SubscriptionPlan.objects.get(stripe_price_id=price_id)
+        except SubscriptionPlan.DoesNotExist:
+            logger.warning("SubscriptionPlan not found: price_id=%s", price_id)
+            return
+
         SubscriptionStatus.objects.filter(
             stripe_subscription_id=stripe_subscription_id
         ).update(
+            subscription_plan=plan,
             status="updated",
             current_period_start=period_start,
             current_period_end=period_end,
         )
-        logger.info("SubscriptionStatus updated: subscription_id=%s", stripe_subscription_id)
+        stripe_customer_id = data["customer"]  # type: ignore[index]
+        logger.info("SubStatus updated: sub=%s plan=%s cus=%s", stripe_subscription_id, plan.name, stripe_customer_id)
 
     @staticmethod
     def handle_subscription_deleted(data: object) -> None:
@@ -157,7 +174,8 @@ class StripeWebhookService:
         SubscriptionStatus.objects.filter(
             stripe_subscription_id=stripe_subscription_id
         ).update(status="deleted")
-        logger.info("SubscriptionStatus deleted: subscription_id=%s", stripe_subscription_id)
+        stripe_customer_id = data["customer"]  # type: ignore[index]
+        logger.info("SubStatus deleted: sub=%s cus=%s", stripe_subscription_id, stripe_customer_id)
 
     # ========================================
     # charge.refunded
@@ -168,17 +186,19 @@ class StripeWebhookService:
         """返金時: CreditStatus / InvoiceStatus の status を refunded に UPDATE."""
         payment_intent_id = data["payment_intent"]  # type: ignore[index]
 
+        stripe_customer_id = data["customer"]  # type: ignore[index]
+
         updated = CreditStatus.objects.filter(
             stripe_payment_id=payment_intent_id
         ).update(status="refunded")
         if updated:
-            logger.info("CreditStatus refunded: payment_id=%s", payment_intent_id)
+            logger.info("CreditStatus refunded: pid=%s cus=%s", payment_intent_id, stripe_customer_id)
             return
 
         updated = InvoiceStatus.objects.filter(
             stripe_payment_id=payment_intent_id
         ).update(status="refunded")
         if updated:
-            logger.info("InvoiceStatus refunded: payment_id=%s", payment_intent_id)
+            logger.info("InvoiceStatus refunded: pid=%s cus=%s", payment_intent_id, stripe_customer_id)
         else:
-            logger.warning("Refund target not found: payment_id=%s", payment_intent_id)
+            logger.warning("Refund target not found: pid=%s cus=%s", payment_intent_id, stripe_customer_id)
