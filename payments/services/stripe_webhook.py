@@ -61,7 +61,7 @@ class StripeWebhookService:
         session = stripe.checkout.Session.retrieve(
             checkout.stripe_session_id, expand=["line_items"]
         )
-        payment_intent_id = session.payment_intent
+        payment_intent_id = str(session.payment_intent)
         price_id = session.line_items.data[0].price.id  # type: ignore[union-attr]
 
         try:
@@ -70,14 +70,12 @@ class StripeWebhookService:
             logger.warning("CreditPlan not found: price_id=%s", price_id)
             return
 
-        _, created = CreditStatus.objects.get_or_create(
+        CreditStatus.objects.create(
             stripe_payment_id=payment_intent_id,
-            defaults={
-                "stripe_customer": checkout.stripe_customer,
-                "credit_plan": credit_plan,
-            },
+            stripe_customer=checkout.stripe_customer,
+            credit_plan=credit_plan,
         )
-        logger.info("CreditStatus %s: payment_id=%s", "created" if created else "exists", payment_intent_id)
+        logger.info("CreditStatus created: payment_id=%s", payment_intent_id)
 
     @staticmethod
     def _create_invoice_history(checkout: CheckoutSessionStatus) -> None:
@@ -85,20 +83,18 @@ class StripeWebhookService:
         session = stripe.checkout.Session.retrieve(
             checkout.stripe_session_id, expand=["line_items"]
         )
-        payment_intent_id = session.payment_intent
+        payment_intent_id = str(session.payment_intent)
         line_item = session.line_items.data[0]  # type: ignore[union-attr]
         description = line_item.description or "カスタム支払い"
         amount = line_item.amount_total
 
-        _, created = InvoiceStatus.objects.get_or_create(
+        InvoiceStatus.objects.create(
             stripe_payment_id=payment_intent_id,
-            defaults={
-                "stripe_customer": checkout.stripe_customer,
-                "description": description,
-                "amount": amount,
-            },
+            stripe_customer=checkout.stripe_customer,
+            description=description,
+            amount=amount,
         )
-        logger.info("InvoiceStatus %s: payment_id=%s", "created" if created else "exists", payment_intent_id)
+        logger.info("InvoiceStatus created: payment_id=%s", payment_intent_id)
 
     # ========================================
     # subscription 系
@@ -124,18 +120,15 @@ class StripeWebhookService:
         period_start = datetime.fromtimestamp(item["current_period_start"], tz=UTC)
         period_end = datetime.fromtimestamp(item["current_period_end"], tz=UTC)
 
-        _, created = SubscriptionStatus.objects.update_or_create(
+        SubscriptionStatus.objects.create(
             stripe_subscription_id=stripe_subscription_id,
-            defaults={
-                "stripe_customer": stripe_customer,
-                "subscription_plan": plan,
-                "status": "created",
-                "current_period_start": period_start,
-                "current_period_end": period_end,
-            },
+            stripe_customer=stripe_customer,
+            subscription_plan=plan,
+            status="created",
+            current_period_start=period_start,
+            current_period_end=period_end,
         )
-        status = "created" if created else "updated"
-        logger.info("SubscriptionStatus %s: subscription_id=%s", status, stripe_subscription_id)
+        logger.info("SubscriptionStatus created: subscription_id=%s", stripe_subscription_id)
 
     @staticmethod
     def handle_subscription_updated(data: object) -> None:
