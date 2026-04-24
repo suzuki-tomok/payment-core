@@ -86,22 +86,21 @@ class TestHandleCheckoutCompleted:
 class TestHandleSubscriptionCreated:
     """handle_subscription_created のテスト."""
 
-    @patch("payments.services.stripe_webhook.stripe.Subscription.retrieve")
     def test_creates_history(
         self,
-        mock_retrieve: MagicMock,
         stripe_customer: StripeCustomer,
         subscription_plan: SubscriptionPlan,
     ) -> None:
         """SubscriptionStatus を INSERT."""
-        mock_retrieve.return_value = mock_subscription(
-            subscription_plan.stripe_price_id, 1743465600, 1746144000,
+        data = mock_subscription(
+            subscription_id="sub_new123",
+            customer_id=stripe_customer.stripe_customer_id,
+            price_id=subscription_plan.stripe_price_id,
+            period_start=1743465600,
+            period_end=1746144000,
         )
 
-        StripeWebhookService.handle_subscription_created({
-            "customer": stripe_customer.stripe_customer_id,
-            "id": "sub_new123",
-        })
+        StripeWebhookService.handle_subscription_created(data)
 
         history = SubscriptionStatus.objects.get(stripe_subscription_id="sub_new123")
         assert history.status == "active"
@@ -112,16 +111,20 @@ class TestHandleSubscriptionCreated:
 class TestHandleSubscriptionUpdated:
     """handle_subscription_updated のテスト."""
 
-    @patch("payments.services.stripe_webhook.stripe.Subscription.retrieve")
     def test_updates_history(
         self,
-        mock_retrieve: MagicMock,
         subscription_status: SubscriptionStatus,
     ) -> None:
         """SubscriptionStatus を UPDATE."""
-        mock_retrieve.return_value = mock_subscription("price_test_standard", 1746144000, 1748736000)
+        data = mock_subscription(
+            subscription_id="sub_test123",
+            customer_id="cus_test123",
+            price_id="price_test_standard",
+            period_start=1746144000,
+            period_end=1748736000,
+        )
 
-        StripeWebhookService.handle_subscription_updated({"id": "sub_test123", "customer": "cus_test123"})
+        StripeWebhookService.handle_subscription_updated(data)
 
         subscription_status.refresh_from_db()
         assert subscription_status.status == "active"

@@ -63,17 +63,13 @@ sequenceDiagram
     end
 
     opt 契約直後
-        S->>D: Webhook: customer.subscription.created
-        D->>S: Subscription.retrieve(sub_xxx)
-        S-->>D: items.data[0] {price_id, current_period_start, current_period_end}
+        S->>D: Webhook: customer.subscription.created (items.data[0] 含む)
         D->>DB: SubscriptionStatus INSERT (status=active)
         D-->>S: 200 OK
     end
 
     opt 毎月更新時
-        S->>D: Webhook: customer.subscription.updated
-        D->>S: Subscription.retrieve(sub_xxx)
-        S-->>D: items.data[0] {price_id, current_period_start, current_period_end}
+        S->>D: Webhook: customer.subscription.updated (items.data[0] 含む)
         D->>DB: SubscriptionStatus UPDATE (status=active/past_due, period)
         D-->>S: 200 OK
     end
@@ -118,9 +114,9 @@ sequenceDiagram
         D-->>U: 処理中画面（スピナー表示）
 
         S->>D: Webhook: checkout.session.completed
-        D->>DB: CheckoutSessionStatus.status = completed
         D->>S: Session.retrieve(cs_xxx, expand=["line_items"])
         S-->>D: payment_intent, line_items.data[0].price.id
+        D->>DB: CheckoutSessionStatus.status = completed
         D->>DB: CreditStatus INSERT (status=succeeded)
         D-->>S: 200 OK
 
@@ -190,9 +186,9 @@ sequenceDiagram
         D-->>U: 処理中画面（スピナー表示）
 
         S->>D: Webhook: checkout.session.completed
-        D->>DB: CheckoutSessionStatus.status = completed
         D->>S: Session.retrieve(cs_xxx, expand=["line_items"])
         S-->>D: payment_intent, line_items.data[0].price_data
+        D->>DB: CheckoutSessionStatus.status = completed
         D->>DB: InvoiceStatus INSERT (description, amount, status=succeeded)
         D-->>S: 200 OK
 

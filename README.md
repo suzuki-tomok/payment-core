@@ -73,6 +73,34 @@ stripe listen --forward-to localhost:8000/webhook/
 CVC: 123
 ```
 
+## Stripe API バージョン
+
+このプロジェクトは **`2025-03-31.basil`** を前提にしています。
+（`current_period_start` / `current_period_end` が `items.data[n]` 配下に移動したバージョン以降）
+
+バージョンは2箇所で明示的に pin する必要があります:
+
+### 1. コード側（[config/settings.py](config/settings.py)）
+
+```python
+STRIPE_API_VERSION = "2025-03-31.basil"
+```
+
+この値が `stripe_checkout.py` / `stripe_webhook.py` 冒頭で `stripe.api_version` に設定されます。
+
+### 2. Stripe Dashboard 側（Webhook）
+
+Webhook payload のバージョンは Dashboard 側の設定が優先されるため、手動で揃える必要があります:
+
+1. **Developers → Webhooks** で該当エンドポイントを開く
+2. 右上の **"Update version"** をクリック
+3. **`2025-03-31.basil`** を選択して保存
+
+### バージョンアップ時のルール
+
+- **コード側（`STRIPE_API_VERSION`）と Dashboard 側の Webhook バージョンは常に一致させる**
+- 上げる際は Stripe の [API changelog](https://docs.stripe.com/changelog) で破壊的変更を確認し、`handle_*` 系の webhook handler で読んでいるフィールドが移動・削除されていないかを必ずチェック
+
 ## テスト・静的解析
 
 ```bash

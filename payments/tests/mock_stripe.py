@@ -24,13 +24,21 @@ def mock_checkout_session_custom(payment_intent_id: str, description: str, amoun
     return mock_session
 
 
-def mock_subscription(price_id: str, period_start: int, period_end: int) -> dict:  # type: ignore[type-arg]
-    """Subscription.retrieve のモックレスポンスを作成."""
+def mock_subscription(  # type: ignore[type-arg]
+    subscription_id: str,
+    customer_id: str,
+    price_id: str,
+    period_start: int,
+    period_end: int,
+) -> dict:
+    """customer.subscription.created / updated の webhook payload (data.object) を作成."""
     return {
+        "id": subscription_id,
+        "customer": customer_id,
+        "status": "active",
         "items": {"data": [{
             "price": {"id": price_id},
             "current_period_start": period_start,
             "current_period_end": period_end,
         }]},
-        "status": "active",
     }
