@@ -1,0 +1,62 @@
+[project]
+name = "payment-core"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+exclude = ["*/migrations/*", "manage.py"]
+
+[tool.ruff.lint.per-file-ignores]
+"payments/tests/**" = ["S101"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "S",   # flake8-bandit (security)
+    "N",   # pep8-naming
+    "ANN", # flake8-annotations
+    "C90", # mccabe complexity
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["mypy_django_plugin.main"]
+exclude = ["manage\\.py$", ".*/migrations/.*"]
+
+[[tool.mypy.overrides]]
+module = "config.settings"
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["import_export.*", "openpyxl.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["payments.admin", "payments.resources"]
+disallow_subclassing_any = false
+
+[[tool.mypy.overrides]]
+module = "payments.views.*"
+disallow_subclassing_any = false
+disable_error_code = ["attr-defined"]
+
+[[tool.mypy.overrides]]
+module = ["payments.services.stripe_checkout", "payments.services.stripe_webhook"]
+disable_error_code = ["no-any-return", "no-untyped-call", "unused-ignore", "attr-defined"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["tests.py", "test_*.py"]
+pythonpath = ["."]
+addopts = "-v --tb=short"
