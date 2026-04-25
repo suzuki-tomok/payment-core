@@ -9,7 +9,10 @@ line-length = 120
 exclude = ["*/migrations/*", "manage.py"]
 
 [tool.ruff.lint.per-file-ignores]
-"payments/tests/**" = ["S101"]
+"payment/tests/**" = ["S101"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
 
 [tool.ruff.lint]
 select = [

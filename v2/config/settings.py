@@ -34,7 +34,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "payment.middleware.ExceptionTranslationMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -86,5 +85,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-# API version は明示的に pin する。アップデートする際は Dashboard 側の Webhook エンドポイント設定も同じバージョンに揃えること。
+# API version は明示的に pin する。
+# アップデートする際は Dashboard 側の Webhook エンドポイント設定も同じバージョンに揃えること。
 STRIPE_API_VERSION = "2025-03-31.basil"
+
+# payment app の success/cancel URL を組み立てる時のベース URL.
+# 本番では https の正式ドメインに差し替えること.
+PAYMENT_BASE_URL = os.getenv("PAYMENT_BASE_URL", "http://localhost:8000")

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>決済キャンセル</title>
+    <style>
+        body { font-family: sans-serif; max-width: 480px; margin: 80px auto; padding: 0 20px; color: #222; }
+        h1 { font-size: 1.4rem; margin-bottom: 1rem; }
+        .message { background: #fff3e0; color: #e65100; padding: 16px; border-radius: 8px; margin-bottom: 24px; }
+        .note { color: #666; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <h1>決済をキャンセルしました</h1>
+
+    <div class="message">
+        取引ID: {{ order_id }} の決済はキャンセルされました。
+    </div>
+
+    <p class="note">このタブを閉じて、元の画面に戻ってください。</p>
+</body>
+</html>

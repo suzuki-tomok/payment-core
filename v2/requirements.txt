@@ -5,6 +5,8 @@ colorama==0.4.6
 Django==5.2.13
 django-stubs==6.0.3
 django-stubs-ext==6.0.3
+factory_boy==3.3.3
+Faker==40.15.0
 idna==3.13
 iniconfig==2.3.0
 librt==0.9.0
