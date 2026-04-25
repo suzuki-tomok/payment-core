@@ -137,3 +137,5 @@ LOGIN_REDIRECT_URL = 'dashboard'
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+# API version は明示的に pin する。アップデートする際は Dashboard 側の Webhook エンドポイント設定も同じバージョンに揃えること。
+STRIPE_API_VERSION = "2025-03-31.basil"
