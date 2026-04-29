@@ -17,7 +17,7 @@ erDiagram
         int stripe_customer_id FK
         string order_id UK
         string stripe_session_id UK
-        string stripe_payment_id UK
+        string stripe_payment_id UK "nullable"
         int amount
         string description
         string session_status

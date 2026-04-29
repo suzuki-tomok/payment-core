@@ -4,9 +4,12 @@
     - 各 handler は DB 更新だけを行う (外部 API は呼ばない).
     - 必要な事前 fetch は view 側で済ませて DTO で渡す.
     - atomic / EventLog 書き込みは view 側で集約 (handler は知らない).
+    - .update() は auto_now を発火しないため updated_at を明示的にセットする.
 """
 
 import logging
+
+from django.utils import timezone
 
 from payment.models import Payment
 from payment.stripe.dtos import (
@@ -49,12 +52,15 @@ def handle_checkout_completed(
         )
         return
 
-    # 確定状態へ更新 (Stripe 側の真実値を amount / description に反映)
+    # 確定状態へ更新 (Stripe 側の真実値を amount / description / payment_intent_id に反映).
+    # stripe_payment_id は ここで初めてセットされる (起票時は NULL — Stripe lazy PI のため).
     Payment.objects.filter(stripe_session_id=stripe_session_id).update(
         session_status=Payment.SessionStatus.COMPLETED,
         payment_status=Payment.PaymentStatus.SUCCEEDED,
         amount=details.amount,
         description=details.description,
+        stripe_payment_id=details.payment_intent_id,
+        updated_at=timezone.now(),
     )
     logger.info(
         "Payment completed: stripe_session_id=%s amount=%d",
@@ -69,6 +75,7 @@ def handle_checkout_expired(event: ConstructWebhookEventOutput) -> None:
     # session_status のみ更新 (payment_status は触らない)
     updated = Payment.objects.filter(stripe_session_id=stripe_session_id).update(
         session_status=Payment.SessionStatus.EXPIRED,
+        updated_at=timezone.now(),
     )
 
     if updated == 0:
@@ -87,6 +94,7 @@ def handle_charge_refunded(event: ConstructWebhookEventOutput) -> None:
     # payment_status のみ更新 (session_status は触らない)
     updated = Payment.objects.filter(stripe_payment_id=stripe_payment_id).update(
         payment_status=Payment.PaymentStatus.REFUNDED,
+        updated_at=timezone.now(),
     )
 
     if updated == 0:

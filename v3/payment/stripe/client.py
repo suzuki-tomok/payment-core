@@ -120,20 +120,16 @@ class StripeClient:
             logger.exception("Stripe unexpected: req=%s type=%s", e.request_id, type(e).__name__)
             raise PaymentSystemError(f"Unexpected Stripe error (req={e.request_id})") from e
 
-        # mode=payment かつ Session.create 直後は url / payment_intent が必ず set される (Stripe API 仕様).
+        # mode=payment かつ Session.create 直後は url が必ず set される (Stripe API 仕様).
         # None なら Stripe API が契約を破ってるので恒久エラーとして surface (assert は -O で消えるので使わない).
         if session.url is None:
             raise PaymentConfigError("Stripe contract violation: session.url is None after create")
-        # session.payment_intent の SDK 型は str | PaymentIntent | None. mode=payment 直後は str (ID) で返る.
-        # None / 別型を素通しすると str(None)="None" や str(PaymentIntent obj)="<...>" が DB に入り、
-        # 次の起票で stripe_payment_id unique 衝突を起こす. isinstance で str を保証する.
-        if not isinstance(session.payment_intent, str):
-            raise PaymentConfigError(
-                "Stripe contract violation: session.payment_intent is not str after create",
-            )
+        # payment_intent_id は ここでは取得しない:
+        # Stripe Adaptive Pricing 等 lazy PI 設定が有効な account では、Session.create 時点で
+        # PaymentIntent が作られず response.payment_intent=null となる.
+        # 確定値は webhook (checkout.session.completed) で Session.retrieve 後に取得する (v1 と同じパターン).
         return CreateCheckoutSessionOutput(
             session_id=session.id,
-            payment_intent_id=session.payment_intent,
             url=session.url,
         )
 
@@ -176,9 +172,13 @@ class StripeClient:
             )
         # 我々の create_checkout_session は line_items を 1 件しか送らないので [0] 固定で OK.
         line_item = session.line_items.data[0]
+        # webhook 時点 (= 顧客が決済完了した後) は payment_intent が確定して str ID で返る.
+        # Adaptive Pricing 等で lazy だった PI もこの時点で作られている.
+        payment_intent_id = str(session.payment_intent)
         return GetCompletedSessionDetailsOutput(
             amount=line_item.amount_total,
             description=line_item.description or "",
+            payment_intent_id=payment_intent_id,
         )
 
     def construct_webhook_event(

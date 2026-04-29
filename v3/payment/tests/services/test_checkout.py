@@ -37,13 +37,11 @@ def _make_input(order_id: str = "order-1", company_id: str = "company-1") -> Che
 def _set_session_response(
     client_mock: Mock,
     session_id: str = "cs_test_x",
-    payment_intent_id: str = "pi_test_x",
     url: str = "https://stripe.example.com/checkout",
 ) -> None:
     """create_checkout_session の戻り値を仕込む."""
     client_mock.create_checkout_session.return_value = CreateCheckoutSessionOutput(
         session_id=session_id,
-        payment_intent_id=payment_intent_id,
         url=url,
     )
 
@@ -59,7 +57,6 @@ def test_create_new_customer_and_payment(mock_stripe_client: Mock):
     _set_session_response(
         mock_stripe_client,
         session_id="cs_new",
-        payment_intent_id="pi_new",
         url="https://stripe.example.com/abc",
     )
 
@@ -74,7 +71,8 @@ def test_create_new_customer_and_payment(mock_stripe_client: Mock):
     payment = Payment.objects.get(order_id="order-1")
     assert payment.stripe_customer == customer
     assert payment.stripe_session_id == "cs_new"
-    assert payment.stripe_payment_id == "pi_new"
+    # stripe_payment_id は webhook 時にセットされるので、起票時点では NULL.
+    assert payment.stripe_payment_id is None
     assert payment.amount == 1000
     assert payment.description == "Product"
     assert payment.session_status == Payment.SessionStatus.PENDING

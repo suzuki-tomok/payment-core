@@ -88,7 +88,9 @@ def test_completed_processes_handler(client, mock_stripe_client):
         data={"id": "cs_x"},
     )
     mock_stripe_client.get_completed_session_details.return_value = (
-        GetCompletedSessionDetailsOutput(amount=2000, description="confirmed")
+        GetCompletedSessionDetailsOutput(
+            amount=2000, description="confirmed", payment_intent_id="pi_confirmed",
+        )
     )
 
     response = _post_webhook(client)
@@ -142,7 +144,7 @@ def test_completed_handler_failure_returns_500(
         data={"id": "cs_x"},
     )
     mock_stripe_client.get_completed_session_details.return_value = (
-        GetCompletedSessionDetailsOutput(amount=1000, description="x")
+        GetCompletedSessionDetailsOutput(amount=1000, description="x", payment_intent_id="pi_x")
     )
 
     # views.py が import している handle_checkout_completed を差替

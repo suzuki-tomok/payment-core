@@ -38,10 +38,10 @@ sequenceDiagram
 
         SVC->>GW: create_checkout_session(amount, success_url, cancel_url,<br/>idempotency_key=checkout-{order_id})
         GW->>S: stripe.checkout.Session.create(...)
-        S-->>GW: session_id, url, payment_intent_id
-        GW-->>SVC: CreateCheckoutSessionOutput
-        SVC->>DB: Payment INSERT (session=pending, payment=unpaid)
-        Note over SVC,DB: race: IntegrityError → DuplicateOrderError 変換
+        S-->>GW: session_id, url<br/>(payment_intent は Adaptive Pricing 等で null の可能性)
+        GW-->>SVC: CreateCheckoutSessionOutput (session_id + url のみ)
+        SVC->>DB: Payment INSERT (session=pending, payment=unpaid,<br/>stripe_payment_id=NULL)
+        Note over SVC,DB: stripe_payment_id は webhook で確定 (lazy PI 対応).<br/>race: IntegrityError → DuplicateOrderError 変換
         SVC-->>V: checkout_url
         V-->>C: 200 {"url": "..."}
         C-->>U: Stripe Checkout 画面へリダイレクト
@@ -63,12 +63,12 @@ sequenceDiagram
         Note over V,DB: 既存なら 200 で即 return
         V->>GW: get_completed_session_details(session_id)
         GW->>S: Session.retrieve(expand=["line_items"])
-        S-->>GW: line_items.data[0]
-        GW-->>V: GetCompletedSessionDetailsOutput
+        S-->>GW: line_items.data[0] + payment_intent (確定済 str ID)
+        GW-->>V: GetCompletedSessionDetailsOutput<br/>(amount, description, payment_intent_id)
 
         V->>DB: BEGIN tx
         V->>SVC: handle_checkout_completed(event, details)
-        SVC->>DB: Payment UPDATE (session=completed, payment=succeeded, amount, description)
+        SVC->>DB: Payment UPDATE (session=completed, payment=succeeded,<br/>amount, description, stripe_payment_id ← ここで確定)
         Note over SVC,DB: 既 SUCCEEDED / REFUNDED は上書きしない
         V->>DB: StripeWebhookEventLog INSERT
         V->>DB: COMMIT
@@ -139,10 +139,10 @@ sequenceDiagram
     SVC->>DB: StripeCustomer INSERT
 
     SVC->>GW: create_checkout_session(...)
-    GW->>GW: in-memory _sessions に保存<br/>(amount, description, success_url, cancel_url)
-    GW-->>SVC: cs_mock_xxx, pi_mock_xxx,<br/>url=http://localhost:8000/payment/mock/checkout/cs_mock_xxx/
+    GW->>GW: in-memory _sessions に保存<br/>(amount, description, payment_intent_id, success_url, cancel_url)
+    GW-->>SVC: cs_mock_xxx,<br/>url=http://localhost:8000/payment/mock/checkout/cs_mock_xxx/
 
-    SVC->>DB: Payment INSERT (pending / unpaid)
+    SVC->>DB: Payment INSERT (pending / unpaid, stripe_payment_id=NULL)
     SVC-->>V: mock checkout URL
     V-->>C: 200 {"url": "..."}
     C-->>U: mock URL へリダイレクト
@@ -150,12 +150,12 @@ sequenceDiagram
     U->>V: GET /payment/mock/checkout/cs_mock_xxx/
     V->>V: settings.USE_MOCK_STRIPE 確認 (False なら 404)
     V->>GW: _sessions[session_id] 取得
-    GW-->>V: amount, description, success_url
+    GW-->>V: amount, description, payment_intent_id, success_url
 
     Note over V,DB: 本物 Stripe からは webhook で来る completion を、<br/>mock では view 内で同じ handler を発火して再現
     V->>DB: BEGIN tx
     V->>SVC: handle_checkout_completed(event, details)
-    SVC->>DB: Payment UPDATE (session=completed, payment=succeeded)
+    SVC->>DB: Payment UPDATE (session=completed, payment=succeeded,<br/>stripe_payment_id ← ここで確定)
     V->>DB: StripeWebhookEventLog INSERT
     V->>DB: COMMIT
 

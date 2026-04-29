@@ -99,12 +99,13 @@ def create_checkout_url(input: CheckoutInput) -> str:
     # 4. Payment レコード作成. race 時 (1. の通過後に別 thread が先に作成) は
     # IntegrityError → DuplicateOrderError に変換. Stripe 側は idempotency_key で
     # 同じ Session が返るため孤児なし.
+    # stripe_payment_id は ここでは保存しない (NULL): Stripe Adaptive Pricing で PI が lazy 作成
+    # されるため、確定値は webhook (handle_checkout_completed) でセットする.
     try:
         Payment.objects.create(
             stripe_customer=customer,
             order_id=input.order_id,
             stripe_session_id=result.session_id,
-            stripe_payment_id=result.payment_intent_id,
             amount=input.amount,
             description=input.description,
         )

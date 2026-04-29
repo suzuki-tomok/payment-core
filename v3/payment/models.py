@@ -34,7 +34,9 @@ class Payment(models.Model):
     )
     order_id = models.CharField(max_length=255, unique=True)
     stripe_session_id = models.CharField(max_length=255, unique=True)
-    stripe_payment_id = models.CharField(max_length=255, unique=True)
+    # Stripe Adaptive Pricing 等で Session.create 時点では PaymentIntent が未作成のため null 許容.
+    # webhook (checkout.session.completed) で Session.retrieve 後に確定した ID をセットする.
+    stripe_payment_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     amount = models.IntegerField()
     description = models.CharField(max_length=255)
     session_status = models.CharField(

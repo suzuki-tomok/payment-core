@@ -61,6 +61,7 @@ class StripeClientMock(StripeClient):
         session_id = f"cs_mock_{uuid.uuid4().hex[:14]}"
         payment_intent_id = f"pi_mock_{uuid.uuid4().hex[:14]}"
         # session 状態を in-memory に保存. get_completed_session_details で参照する.
+        # 本物と同様に payment_intent_id は webhook 時 (get_completed_session_details) に返す.
         self._sessions[session_id] = {
             "amount": params.amount,
             "description": params.description,
@@ -76,14 +77,13 @@ class StripeClientMock(StripeClient):
         logger.info("Mock session created: id=%s url=%s", session_id, url)
         return CreateCheckoutSessionOutput(
             session_id=session_id,
-            payment_intent_id=payment_intent_id,
             url=url,
         )
 
     def get_completed_session_details(
         self, session_id: str,
     ) -> GetCompletedSessionDetailsOutput:
-        """in-memory から amount / description を復元."""
+        """in-memory から amount / description / payment_intent_id を復元."""
         session = self._sessions.get(session_id)
         if session is None:
             # 本物の StripeClient なら無効 session_id で PaymentConfigError を raise する.
@@ -92,6 +92,7 @@ class StripeClientMock(StripeClient):
         return GetCompletedSessionDetailsOutput(
             amount=session["amount"],
             description=session["description"],
+            payment_intent_id=session["payment_intent_id"],
         )
 
     def construct_webhook_event(

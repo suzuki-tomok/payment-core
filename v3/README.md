@@ -56,7 +56,11 @@ python manage.py runserver
 
 Stripe API も stripe-cli も不要で end-to-end 動作する。決済起票 → ブラウザが mock 中継 URL に飛ぶ → 自動的に webhook handler を発火 → success_url にリダイレクト → polling で SUCCEEDED が見える。
 
-**フロー確認 (curl):**
+**ブラウザで確認 (推奨):**
+
+`http://localhost:8000/demo/` を開いて起票フォーム submit → 自動成功 → demo トップから order_id で状態確認できる。
+
+**curl で確認:**
 
 ```bash
 # 1. 決済起票
@@ -80,18 +84,52 @@ curl "http://localhost:8000/payment/status/?order_id=ord-test-1"
 
 ### 本物 Stripe モード
 
-`.env` で `USE_MOCK_STRIPE=false` にして 2 ターミナル起動:
+`.env` で `USE_MOCK_STRIPE=false` に変更してから、2 ターミナル必要。
+
+#### 1. Stripe CLI の準備 (初回のみ)
+
+[公式ガイド](https://stripe.com/docs/stripe-cli) を参考にインストール:
+
+- macOS: `brew install stripe/stripe-cli/stripe`
+- Windows: scoop / 公式バイナリ DL
+- Linux: 公式 apt repo / バイナリ DL
+
+インストール後、Stripe アカウントに紐付け (ブラウザで認可):
 
 ```bash
-# ターミナル 1: Django
-python manage.py runserver
-
-# ターミナル 2: Stripe CLI (webhook 転送)
 stripe login
+```
+
+#### 2. Webhook 転送を起動
+
+```bash
+# ターミナル 2 (Django とは別のターミナル):
 stripe listen --forward-to localhost:8000/payment/webhook/
 ```
 
-stripe-cli が出した `whsec_...` を `.env` の `STRIPE_WEBHOOK_SECRET` に設定。
+実行すると次のような出力が出る:
+
+```
+> Ready! You are using Stripe API Version [2025-03-31.basil].
+  Your webhook signing secret is whsec_xxxxxxxxxxxxxxxxxxxxxx (^C to quit)
+```
+
+この `whsec_xxx...` を `.env` の `STRIPE_WEBHOOK_SECRET` に設定して、Django を再起動。
+**毎回新しい値が発行される**ので、`stripe listen` を再起動するたびに `.env` を更新する必要あり。
+
+#### 3. Django を起動
+
+```bash
+# ターミナル 1:
+python manage.py runserver
+```
+
+> **ポート変更時の注意:** `runserver 8001` 等でポートを変えた場合は、
+> `stripe listen --forward-to localhost:8001/payment/webhook/` も同じポートに合わせる。
+
+#### 4. 動作確認
+
+ブラウザで `http://localhost:8000/demo/` を開いてフォーム submit → Stripe Checkout 画面でテストカード入力。
 
 **テスト用カード:**
 
@@ -157,6 +195,9 @@ python manage.py showmigrations
 | `GET` | `/payment/status/?order_id=X` | 決済状態 + 表示用データ (内部 API. success.html の JS が polling) |
 | `POST` | `/payment/webhook/` | Stripe からの webhook 受信 (署名検証 + 冪等性 + dispatch) |
 | `GET` | `/payment/mock/checkout/<session_id>/` | **mock 専用**. `USE_MOCK_STRIPE=true` 時だけ機能 (False なら 404) |
+| `GET` | `/demo/` | **動作確認用デモ**. 起票フォーム + 状態確認フォーム |
+| `POST` | `/demo/checkout/` | demo の起票 (内部で `payment.services.create_checkout_url` を呼ぶ) |
+| `GET` | `/demo/status/?order_id=X` | demo の状態確認 (内部で `get_payment_status` を呼ぶ) |
 
 ---
 
@@ -191,6 +232,15 @@ v3/
 │   │   ├── services/               #   service 層 test (39 件)
 │   │   └── views/                  #   view 層 test (30 件)
 │   └── migrations/
+├── demo/                           # ★ 動作確認用 (payment app の consumer 見本)
+│   ├── views.py                    #   index / checkout / status
+│   ├── urls.py                     #   /demo/ 配下のルーティング
+│   └── templates/demo/
+│       ├── index.html              #   起票フォーム + 状態確認フォーム
+│       └── status.html
+├── docs/
+│   ├── er-diagram.md
+│   └── sequence-diagram.md
 ├── manage.py
 ├── pyproject.toml
 ├── requirements.txt

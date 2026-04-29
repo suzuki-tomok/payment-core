@@ -10,6 +10,7 @@ from django.db import transaction
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
@@ -132,9 +133,11 @@ def cancel_view(request: HttpRequest) -> HttpResponse:
         raise Http404("order_id not found")
 
     # pending のみ canceled に更新. expired / completed 等は触らない.
+    # .update() は auto_now を発火しないため updated_at を明示セット.
     if payment.session_status == Payment.SessionStatus.PENDING:
         Payment.objects.filter(pk=payment.pk).update(
             session_status=Payment.SessionStatus.CANCELED,
+            updated_at=timezone.now(),
         )
 
     return render(request, "payment/cancel.html", {"order_id": payment.order_id})
@@ -212,6 +215,7 @@ def mock_checkout_view(request: HttpRequest, session_id: str) -> HttpResponse:
     details = GetCompletedSessionDetailsOutput(
         amount=mock_session["amount"],
         description=mock_session["description"],
+        payment_intent_id=mock_session["payment_intent_id"],
     )
 
     # handler + EventLog を本物 stripe_webhook_view と同じ atomic で実行.

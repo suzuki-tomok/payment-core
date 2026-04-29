@@ -51,7 +51,7 @@ def _refunded_event(payment_intent_id: str) -> ConstructWebhookEventOutput:
 def test_completed_no_payment_noops():
     """Payment 不在 → エラーにならず何もしない (Stripe にリトライさせない)."""
     event = _completed_event("cs_unknown")
-    details = GetCompletedSessionDetailsOutput(amount=500, description="X")
+    details = GetCompletedSessionDetailsOutput(amount=500, description="X", payment_intent_id="pi_x")
 
     handle_checkout_completed(event, details)
 
@@ -69,7 +69,9 @@ def test_completed_pending_to_succeeded():
         payment_status=Payment.PaymentStatus.UNPAID,
     )
     event = _completed_event("cs_test_xyz")
-    details = GetCompletedSessionDetailsOutput(amount=2000, description="confirmed")
+    details = GetCompletedSessionDetailsOutput(
+        amount=2000, description="confirmed", payment_intent_id="pi_confirmed",
+    )
 
     handle_checkout_completed(event, details)
 
@@ -78,6 +80,7 @@ def test_completed_pending_to_succeeded():
     assert payment.payment_status == Payment.PaymentStatus.SUCCEEDED
     assert payment.amount == 2000
     assert payment.description == "confirmed"
+    assert payment.stripe_payment_id == "pi_confirmed"  # webhook 時にセット
 
 
 @pytest.mark.django_db
@@ -92,7 +95,9 @@ def test_completed_already_succeeded_noops():
     )
     event = _completed_event("cs_test_xyz")
     # 全く違う値を渡しても上書きされないこと
-    details = GetCompletedSessionDetailsOutput(amount=9999, description="should not overwrite")
+    details = GetCompletedSessionDetailsOutput(
+        amount=9999, description="should not overwrite", payment_intent_id="pi_other",
+    )
 
     handle_checkout_completed(event, details)
 
@@ -111,7 +116,9 @@ def test_completed_already_refunded_not_overwritten():
         payment_status=Payment.PaymentStatus.REFUNDED,
     )
     event = _completed_event("cs_test_xyz")
-    details = GetCompletedSessionDetailsOutput(amount=1000, description="x")
+    details = GetCompletedSessionDetailsOutput(
+        amount=1000, description="x", payment_intent_id="pi_x",
+    )
 
     handle_checkout_completed(event, details)
 

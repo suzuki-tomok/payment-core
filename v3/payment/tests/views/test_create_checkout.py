@@ -38,7 +38,7 @@ def test_returns_url_on_success(client, mock_stripe_client):
     """happy path: 200 + JSON {url}."""
     mock_stripe_client.create_customer.return_value = "cus_x"
     mock_stripe_client.create_checkout_session.return_value = CreateCheckoutSessionOutput(
-        session_id="cs_x", payment_intent_id="pi_x", url="https://stripe.example/c",
+        session_id="cs_x", url="https://stripe.example/c",
     )
 
     response = _post_checkout(client, _valid_body())

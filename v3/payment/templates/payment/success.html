@@ -43,8 +43,8 @@
 
     <script>
         (function() {
-            const orderId = {{ order_id|escapejs|stringformat:"'%s'"|safe }};
-            const statusUrl = '{% url "payment:status" %}';
+            const orderId = "{{ order_id|escapejs }}";
+            const statusUrl = "{% url 'payment:status' %}";
             const statusEl = document.getElementById('status');
             const messageEl = document.getElementById('status-message');
             const closeNoteEl = document.getElementById('close-note');

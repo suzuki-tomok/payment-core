@@ -49,19 +49,23 @@ class ConstructWebhookEventInput:
 
 @dataclass(frozen=True)
 class CreateCheckoutSessionOutput:
-    """create_checkout_session の戻り値."""
+    """create_checkout_session の戻り値.
+
+    payment_intent_id は持たない: Adaptive Pricing 等で Stripe が PI を lazy 作成するため、
+    確定値は webhook (checkout.session.completed) で Session.retrieve 後に取得する.
+    """
 
     session_id: str
-    payment_intent_id: str
     url: str
 
 
 @dataclass(frozen=True)
 class GetCompletedSessionDetailsOutput:
-    """完了済 Session の line_item から取得した確定値."""
+    """完了済 Session から取得した確定値. webhook (checkout.session.completed) で参照する."""
 
     amount: int
     description: str
+    payment_intent_id: str
 
 
 @dataclass(frozen=True)
