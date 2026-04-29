@@ -243,27 +243,60 @@ def stripe_webhook_view(request: HttpRequest) -> HttpResponse:
         400: 署名 / payload 不正 (再送無意味)
         500: 我々側の処理失敗 (Stripe にリトライさせる)
         502: Stripe 一時障害で事前 fetch 失敗 (Stripe にリトライさせる)
+
+    ログ方針 (forensics 用):
+        - 受信時に raw body + 署名 header を必ず log (署名検証より前 → 失敗時も残る)
+        - 署名検証成功後は parse 済 event 全体を log
+        - DB には冪等性キー (event_id) しか保存しない. 生 payload は log aggregation
+          (Datadog/CloudWatch 等) 側で保持する設計.
     """
     client = get_stripe_client()
+    body = request.body
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
+
+    # 0. 受信 log (署名検証より前. 失敗時の forensics でも raw body が残るように).
+    logger.info(
+        "Webhook raw received",
+        extra={
+            "stripe_signature": sig_header,
+            "body_size": len(body),
+            "body": body.decode("utf-8", errors="replace"),
+        },
+    )
 
     # 1. 署名検証 + parse (StripeClient で密閉. stripe.* は触らない)
     try:
         event = client.construct_webhook_event(ConstructWebhookEventInput(
-            payload=request.body,
-            sig_header=request.META.get("HTTP_STRIPE_SIGNATURE", ""),
+            payload=body,
+            sig_header=sig_header,
             secret=settings.STRIPE_WEBHOOK_SECRET,
         ))
     except WebhookSignatureError:
-        # 署名検証失敗 / JSON 不正 / thin event → 400 (Stripe にリトライさせない)
-        logger.warning("Webhook signature verification failed")
+        # 署名検証失敗 / JSON 不正 / thin event → 400 (Stripe にリトライさせない).
+        # raw body は受信 log に残ってるが、明示的に「失敗 path」で再度 marker log.
+        logger.warning(
+            "Webhook signature verification failed",
+            extra={"sig_header_prefix": sig_header[:20], "body_size": len(body)},
+        )
         return HttpResponse(status=400)
 
     # 2. 冪等性チェック (既処理ならスキップ. EventLog の event_id unique 制約と二重防御)
     if StripeWebhookEventLog.objects.filter(event_id=event.event_id).exists():
-        logger.info("Webhook already processed: %s (%s)", event.event_id, event.event_type)
+        logger.info(
+            "Webhook already processed",
+            extra={"event_id": event.event_id, "event_type": event.event_type},
+        )
         return HttpResponse(status=200)
 
-    logger.info("Webhook received: %s (%s)", event.event_id, event.event_type)
+    # 3. parse 済 event の構造化 log (data オブジェクト全体を残す).
+    logger.info(
+        "Webhook event verified",
+        extra={
+            "event_id": event.event_id,
+            "event_type": event.event_type,
+            "event_data": event.data,
+        },
+    )
 
     # 3. event_type ごとに分岐. 各ブランチが atomic + EventLog を持つ自己完結型.
 
@@ -275,11 +308,17 @@ def stripe_webhook_view(request: HttpRequest) -> HttpResponse:
             details = client.get_completed_session_details(event.data["id"])
         except PaymentSystemError:
             # Stripe 一時障害 → Stripe にリトライさせる
-            logger.warning("Stripe transient error on retrieve: %s", event.event_id)
+            logger.warning(
+                "Stripe transient error on retrieve",
+                extra={"event_id": event.event_id, "event_type": event.event_type},
+            )
             return HttpResponse(status=502)
         except PaymentConfigError:
             # session 不存在 / API key 不正等 → 我々側のバグ
-            logger.exception("Stripe permanent error on retrieve: %s", event.event_id)
+            logger.exception(
+                "Stripe permanent error on retrieve",
+                extra={"event_id": event.event_id, "event_type": event.event_type},
+            )
             return HttpResponse(status=500)
 
         try:
@@ -292,7 +331,8 @@ def stripe_webhook_view(request: HttpRequest) -> HttpResponse:
         except Exception:
             # DB 障害 / EventLog の IntegrityError (同時実行) 等 → Stripe に再送させる
             logger.exception(
-                "Webhook handler failed: %s (%s)", event.event_id, event.event_type,
+                "Webhook handler failed",
+                extra={"event_id": event.event_id, "event_type": event.event_type},
             )
             return HttpResponse(status=500)
         return HttpResponse(status=200)
@@ -309,7 +349,8 @@ def stripe_webhook_view(request: HttpRequest) -> HttpResponse:
                 )
         except Exception:
             logger.exception(
-                "Webhook handler failed: %s (%s)", event.event_id, event.event_type,
+                "Webhook handler failed",
+                extra={"event_id": event.event_id, "event_type": event.event_type},
             )
             return HttpResponse(status=500)
         return HttpResponse(status=200)
@@ -326,7 +367,8 @@ def stripe_webhook_view(request: HttpRequest) -> HttpResponse:
                 )
         except Exception:
             logger.exception(
-                "Webhook handler failed: %s (%s)", event.event_id, event.event_type,
+                "Webhook handler failed",
+                extra={"event_id": event.event_id, "event_type": event.event_type},
             )
             return HttpResponse(status=500)
         return HttpResponse(status=200)
@@ -334,7 +376,7 @@ def stripe_webhook_view(request: HttpRequest) -> HttpResponse:
     # 想定外 event_type (Dashboard 設定漏れ等). 200 で受領済扱い (Stripe にリトライさせない).
     # EventLog は記録しない: 実際に処理してないので「処理済」フラグを残さない.
     logger.warning(
-        "Unhandled webhook event type: %s (event_id=%s)",
-        event.event_type, event.event_id,
+        "Unhandled webhook event type",
+        extra={"event_id": event.event_id, "event_type": event.event_type},
     )
     return HttpResponse(status=200)
