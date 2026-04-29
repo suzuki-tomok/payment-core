@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>決済処理中</title>
+    <style>
+        body { font-family: sans-serif; max-width: 480px; margin: 80px auto; padding: 0 20px; color: #222; }
+        h1 { font-size: 1.4rem; margin-bottom: 1rem; }
+        .summary { background: #f5f5f5; padding: 16px; border-radius: 8px; margin-bottom: 24px; }
+        .summary dt { font-size: 0.85rem; color: #666; }
+        .summary dd { margin: 0 0 12px 0; font-weight: 600; }
+        .summary dd:last-child { margin-bottom: 0; }
+        .spinner {
+            display: inline-block; width: 20px; height: 20px;
+            border: 3px solid #eee; border-top-color: #1976d2;
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+            vertical-align: middle; margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .status { padding: 16px; border-radius: 8px; }
+        .status.pending { background: #e3f2fd; color: #0d47a1; }
+        .status.completed { background: #e8f5e9; color: #1b5e20; }
+        .status.error { background: #ffebee; color: #b71c1c; }
+        .note { margin-top: 24px; color: #666; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <h1>決済処理中</h1>
+
+    <dl class="summary">
+        <dt>取引ID</dt><dd>{{ order_id }}</dd>
+        <dt>金額</dt><dd id="amount">-</dd>
+        <dt>内容</dt><dd id="description">-</dd>
+    </dl>
+
+    <div id="status" class="status pending">
+        <span class="spinner"></span><span id="status-message">決済結果を確認しています...</span>
+    </div>
+
+    <p id="close-note" class="note" style="display: none;">
+        このタブを閉じて、元の画面に戻ってください。
+    </p>
+
+    <script>
+        (function() {
+            const orderId = {{ order_id|escapejs|stringformat:"'%s'"|safe }};
+            const statusUrl = '{% url "payment:status" %}';
+            const statusEl = document.getElementById('status');
+            const messageEl = document.getElementById('status-message');
+            const closeNoteEl = document.getElementById('close-note');
+            const amountEl = document.getElementById('amount');
+            const descriptionEl = document.getElementById('description');
+
+            const POLL_INTERVAL_MS = 2000;
+            const MAX_ATTEMPTS = 30;
+            let attempts = 0;
+
+            async function poll() {
+                attempts += 1;
+                try {
+                    const res = await fetch(statusUrl + '?order_id=' + encodeURIComponent(orderId));
+                    if (!res.ok) {
+                        showError('状態の取得に失敗しました');
+                        return;
+                    }
+                    const data = await res.json();
+                    amountEl.textContent = '¥' + data.amount.toLocaleString();
+                    descriptionEl.textContent = data.description;
+
+                    if (data.status === 'succeeded') {
+                        showSuccess();
+                        return;
+                    }
+                    if (data.status === 'canceled' || data.status === 'expired' || data.status === 'refunded') {
+                        showError('決済が完了しませんでした (' + data.status + ')');
+                        return;
+                    }
+                    if (attempts >= MAX_ATTEMPTS) {
+                        showTimeout();
+                        return;
+                    }
+                    setTimeout(poll, POLL_INTERVAL_MS);
+                } catch (e) {
+                    showError('通信エラーが発生しました');
+                }
+            }
+
+            function showSuccess() {
+                statusEl.className = 'status completed';
+                statusEl.innerHTML = '✓ 決済が完了しました';
+                closeNoteEl.style.display = 'block';
+            }
+
+            function showError(message) {
+                statusEl.className = 'status error';
+                statusEl.innerHTML = '✗ ' + message;
+                closeNoteEl.style.display = 'block';
+            }
+
+            function showTimeout() {
+                messageEl.textContent = '決済処理が完了していない可能性があります。少し時間をおいてから再度確認してください。';
+                closeNoteEl.style.display = 'block';
+            }
+
+            poll();
+        })();
+    </script>
+</body>
+</html>
