@@ -124,11 +124,16 @@ class StripeClient:
         # None なら Stripe API が契約を破ってるので恒久エラーとして surface (assert は -O で消えるので使わない).
         if session.url is None:
             raise PaymentConfigError("Stripe contract violation: session.url is None after create")
-        # session.payment_intent は ID (str) で返るが SDK の型は str | PaymentIntent | None.
-        # mode=payment 直後は必ず str (上記仕様) なので安全に str() できる.
+        # session.payment_intent の SDK 型は str | PaymentIntent | None. mode=payment 直後は str (ID) で返る.
+        # None / 別型を素通しすると str(None)="None" や str(PaymentIntent obj)="<...>" が DB に入り、
+        # 次の起票で stripe_payment_id unique 衝突を起こす. isinstance で str を保証する.
+        if not isinstance(session.payment_intent, str):
+            raise PaymentConfigError(
+                "Stripe contract violation: session.payment_intent is not str after create",
+            )
         return CreateCheckoutSessionOutput(
             session_id=session.id,
-            payment_intent_id=str(session.payment_intent),
+            payment_intent_id=session.payment_intent,
             url=session.url,
         )
 

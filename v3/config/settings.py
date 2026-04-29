@@ -84,10 +84,32 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Stripe
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-# API version は明示的に pin する。
+# API version は明示的に pin する (env 経由で env ごとに上書き可、default はコード側で固定).
 # アップデートする際は Dashboard 側の Webhook エンドポイント設定も同じバージョンに揃えること。
-STRIPE_API_VERSION = "2025-03-31.basil"
+STRIPE_API_VERSION = os.getenv("STRIPE_API_VERSION", "2025-03-31.basil")
 
 # True で StripeClientMock を使う. stripe-cli が使えない開発者向け.
 # 本番では必ず False にすること.
 USE_MOCK_STRIPE = os.getenv("USE_MOCK_STRIPE", "false").lower() in ("true", "1", "yes")
+
+
+# Logging
+# 1 line = 1 JSON object で stdout に出す (Datadog / CloudWatch 等が直接 ingest 可能).
+# request 単位の trace ID は上流 LB / API gateway 側に任せる.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {"()": "payment.logconfig.JsonFormatter"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "json"},
+    },
+    "root": {"handlers": ["console"], "level": "INFO"},
+    "loggers": {
+        # payment app 配下は INFO まで拾う (正常イベントの監査用).
+        "payment": {"level": "INFO", "propagate": True},
+        # django.request は 4xx / 5xx を出すので WARNING で十分.
+        "django.request": {"level": "WARNING", "propagate": True},
+    },
+}

@@ -9,7 +9,8 @@ line-length = 120
 exclude = ["*/migrations/*", "manage.py"]
 
 [tool.ruff.lint.per-file-ignores]
-"payment/tests/**" = ["S101"]
+# tests: assert OK / 型注釈は緩める (factory_boy 等で fixture が動的)
+"payment/tests/**" = ["S101", "ANN"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 15
@@ -37,6 +38,22 @@ exclude = ["manage\\.py$", ".*/migrations/.*"]
 [[tool.mypy.overrides]]
 module = "config.settings"
 disallow_untyped_defs = false
+
+# tests: factory_boy / Mock 等で動的型が多いため緩める.
+# - no-untyped-def/call: factory call が untyped と判定される
+# - attr-defined / comparison-overlap: factory_boy の戻り値が Factory class と誤認される
+# - type-arg: DjangoModelFactory / dict 等の generic 引数省略を許容
+# - no-any-return: Mock(spec=...) の戻り値が Any 扱いになる
+[[tool.mypy.overrides]]
+module = "payment.tests.*"
+disable_error_code = [
+    "no-untyped-def",
+    "no-untyped-call",
+    "attr-defined",
+    "comparison-overlap",
+    "type-arg",
+    "no-any-return",
+]
 
 [[tool.mypy.overrides]]
 module = ["import_export.*", "openpyxl.*"]
