@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>決済完了</title>
+    <style>
+        body { font-family: sans-serif; max-width: 480px; margin: 80px auto; padding: 0 20px; color: #222; }
+        h1 { font-size: 1.4rem; margin-bottom: 1rem; }
+        .panel { background: #e8f5e9; color: #1b5e20; padding: 16px; border-radius: 8px; margin-bottom: 24px; }
+        .summary { background: #f5f5f5; padding: 16px; border-radius: 8px; margin-bottom: 24px; }
+        .summary dt { font-size: 0.85rem; color: #666; }
+        .summary dd { margin: 0 0 12px 0; font-weight: 600; }
+        .note { color: #666; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <h1>✓ 決済を受け付けました</h1>
+
+    {% if order_id %}
+    <dl class="summary">
+        <dt>取引ID</dt><dd>{{ order_id }}</dd>
+    </dl>
+    {% endif %}
+
+    <div class="panel">
+        お支払いありがとうございました。<br>
+        決済の反映には数分かかる場合があります。
+    </div>
+
+    <p class="note">このタブを閉じて、元の画面に戻ってください。</p>
+</body>
+</html>

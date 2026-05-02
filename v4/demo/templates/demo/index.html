@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>payment-core v4 demo</title>
+    <style>
+        body { font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 0 20px; color: #222; }
+        h1 { font-size: 1.6rem; }
+        h2 { font-size: 1.2rem; margin-top: 32px; padding-bottom: 4px; border-bottom: 1px solid #ddd; }
+        .panel { background: #f8f8f8; padding: 20px; border-radius: 8px; margin-bottom: 16px; }
+        label { display: block; font-size: 0.85rem; color: #555; margin-top: 12px; }
+        input[type="text"], input[type="number"] {
+            width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; box-sizing: border-box;
+        }
+        button {
+            margin-top: 16px; padding: 10px 24px; background: #1976d2; color: white;
+            border: none; border-radius: 4px; font-size: 1rem; cursor: pointer;
+        }
+        button:hover { background: #1565c0; }
+        .error { background: #ffebee; color: #b71c1c; padding: 12px; border-radius: 4px; margin-bottom: 16px; }
+        .help { font-size: 0.85rem; color: #666; margin-top: 4px; }
+    </style>
+</head>
+<body>
+    <h1>payment-core v4 demo</h1>
+
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <h2>① 決済を起票</h2>
+    <form method="post" action="{% url 'demo:checkout' %}" class="panel">
+        {% csrf_token %}
+
+        <label>order_id (取引ID, 一意) *</label>
+        <input type="text" name="order_id" value="{{ default_order_id }}" required>
+        <p class="help">同 order_id + 同 amount で再 submit すると Stripe idempotency_key cache hit で同じ Session URL が返る (24h 有効).<br>
+        amount を変えると別 Session が作られる. ページリロードで新しい ID が生成される.</p>
+
+        <label>company_id (会社ID) *</label>
+        <input type="text" name="company_id" value="{{ default_company_id }}" required>
+
+        <label>company_name (会社名, Stripe Dashboard 表示名) *</label>
+        <input type="text" name="company_name" value="{{ default_company_name }}" required>
+
+        <label>amount (金額, 円) *</label>
+        <input type="number" name="amount" value="{{ default_amount }}" min="1" required>
+
+        <label>description (説明) *</label>
+        <input type="text" name="description" value="{{ default_description }}" required>
+
+        <button type="submit">決済画面へ進む (Stripe Checkout)</button>
+    </form>
+
+    <h2>② 決済結果を確認</h2>
+    <form method="get" action="{% url 'demo:status' %}" class="panel">
+        <label>order_id</label>
+        <input type="text" name="order_id" placeholder="起票時の order_id" required>
+        <button type="submit">状態を確認</button>
+    </form>
+
+    <p class="help" style="margin-top:32px;">
+        テスト用カード (本物 Stripe モード): <code>4242 4242 4242 4242</code> / 有効期限 任意の未来 / CVC 任意 3桁<br>
+        Mock モード (<code>USE_MOCK_STRIPE=true</code>) では決済画面は出ず、自動的に成功して戻ってきます.
+    </p>
+</body>
+</html>

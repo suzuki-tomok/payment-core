@@ -1,0 +1,82 @@
+[project]
+name = "payment-core"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+exclude = ["*/migrations/*", "manage.py"]
+
+[tool.ruff.lint.per-file-ignores]
+# tests: assert OK / 型注釈は緩める (factory_boy 等で fixture が動的)
+"payment/tests/**" = ["S101", "ANN"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "S",   # flake8-bandit (security)
+    "N",   # pep8-naming
+    "ANN", # flake8-annotations
+    "C90", # mccabe complexity
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["mypy_django_plugin.main"]
+exclude = ["manage\\.py$", ".*/migrations/.*"]
+
+[[tool.mypy.overrides]]
+module = "config.settings"
+disallow_untyped_defs = false
+
+# tests: factory_boy / Mock 等で動的型が多いため緩める.
+# - no-untyped-def/call: factory call が untyped と判定される
+# - attr-defined / comparison-overlap: factory_boy の戻り値が Factory class と誤認される
+# - type-arg: DjangoModelFactory / dict 等の generic 引数省略を許容
+# - no-any-return: Mock(spec=...) の戻り値が Any 扱いになる
+[[tool.mypy.overrides]]
+module = "payment.tests.*"
+disable_error_code = [
+    "no-untyped-def",
+    "no-untyped-call",
+    "attr-defined",
+    "comparison-overlap",
+    "type-arg",
+    "no-any-return",
+]
+
+[[tool.mypy.overrides]]
+module = ["import_export.*", "openpyxl.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["payments.admin", "payments.resources"]
+disallow_subclassing_any = false
+
+[[tool.mypy.overrides]]
+module = "payments.views.*"
+disallow_subclassing_any = false
+disable_error_code = ["attr-defined"]
+
+[[tool.mypy.overrides]]
+module = ["payments.services.stripe_checkout", "payments.services.stripe_webhook"]
+disable_error_code = ["no-any-return", "no-untyped-call", "unused-ignore", "attr-defined"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["tests.py", "test_*.py"]
+pythonpath = ["."]
+addopts = "-v --tb=short"
